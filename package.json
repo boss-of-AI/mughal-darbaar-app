@@ -1,0 +1,52 @@
+{
+  "name": "restaurant-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "db:generate": "dotenv -e .env.local -- drizzle-kit generate",
+    "db:migrate": "dotenv -e .env.local -- drizzle-kit migrate",
+    "db:push": "dotenv -e .env.local -- drizzle-kit push --force",
+    "db:studio": "dotenv -e .env.local -- drizzle-kit studio",
+    "db:seed": "dotenv -e .env.local -- tsx src/lib/db/seed.ts",
+    "auth:secret": "node -e \"console.log(require('crypto').randomBytes(32).toString('base64'))\""
+  },
+  "dependencies": {
+    "@auth/drizzle-adapter": "^1.11.3",
+    "@aws-sdk/client-s3": "^3.1152.0",
+    "@aws-sdk/s3-request-presigner": "^3.1152.0",
+    "@types/bcryptjs": "^2.4.6",
+    "bcryptjs": "^3.0.3",
+    "blurhash": "^2.0.5",
+    "date-fns": "^4.4.0",
+    "drizzle-orm": "^0.45.4",
+    "lucide-react": "^1.57.0",
+    "next": "16.4.1",
+    "next-auth": "^5.0.0-beta.32",
+    "pg": "^8.23.1",
+    "qrcode": "^1.5.4",
+    "razorpay": "^2.9.8",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-qr-code": "^2.2.0",
+    "resend": "^6.33.0",
+    "sharp": "^0.35.5",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/pg": "^8.23.1",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "dotenv-cli": "^11.0.0",
+    "drizzle-kit": "^0.31.11",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.1",
+    "tsx": "^4.23.15",
+    "typescript": "^5"
+  }
+}

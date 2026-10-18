@@ -1,0 +1,360 @@
+.topBar {
+  background: var(--color-dark);
+  color: var(--color-text-light);
+  font-size: var(--text-xs);
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--color-dark-border);
+}
+
+.topBarInner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.topBarItem {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--color-text-light);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+  white-space: nowrap;
+}
+
+.topBarItem:hover {
+  color: var(--color-gold-light);
+}
+
+.topBarDivider {
+  color: var(--color-dark-border);
+  opacity: 0.6;
+}
+
+/* ── Main Navbar ─────────────────────────────────────────── */
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  background: rgba(254, 253, 248, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--color-border);
+  transition: box-shadow var(--transition-base), background var(--transition-base);
+}
+
+.navbar.scrolled {
+  box-shadow: var(--shadow-md);
+  background: rgba(254, 253, 248, 0.98);
+}
+
+.navInner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  height: 72px;
+}
+
+/* ── Logo ─────────────────────────────────────────────────── */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.logoMark {
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-primary);
+  transition: transform var(--transition-bounce), box-shadow var(--transition-base);
+}
+
+.logo:hover .logoMark {
+  transform: scale(1.05) rotate(-2deg);
+  box-shadow: 0 8px 24px rgba(196, 30, 58, 0.45);
+}
+
+.logoMono {
+  font-family: var(--font-accent);
+  font-size: 1.5rem;
+  color: white;
+  line-height: 1;
+}
+
+.logoText {
+  display: flex;
+  flex-direction: column;
+}
+
+.logoName {
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.2;
+}
+
+.logoTagline {
+  font-family: var(--font-accent);
+  font-size: 0.7rem;
+  color: var(--color-gold);
+  font-style: italic;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ── Desktop Nav ─────────────────────────────────────────── */
+.desktopNav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: auto;
+}
+
+.navLink {
+  padding: 0.5rem 0.875rem;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.navLink::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 0.875rem;
+  right: 0.875rem;
+  height: 2px;
+  background: var(--color-primary);
+  border-radius: 1px;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--transition-base);
+}
+
+.navLink:hover {
+  color: var(--color-text);
+  background: var(--color-surface-alt);
+}
+
+.navLinkActive {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.navLinkActive::after {
+  transform: scaleX(1);
+}
+
+/* ── Actions ─────────────────────────────────────────────── */
+.navActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.cartBtn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-lg);
+  color: var(--color-text-muted);
+  transition: all var(--transition-fast);
+  text-decoration: none;
+  border: 1.5px solid var(--color-border-strong);
+}
+
+.cartBtn:hover {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+  background: var(--color-primary-50);
+}
+
+.cartBadge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  background: var(--color-primary);
+  color: white;
+  border-radius: var(--radius-full);
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--color-bg);
+  animation: scaleIn 0.2s var(--transition-bounce);
+}
+
+/* ── Mobile Toggle ───────────────────────────────────────── */
+.mobileToggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.mobileToggle:hover {
+  background: var(--color-surface-alt);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+/* ── Mobile Overlay ──────────────────────────────────────── */
+.mobileOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 10, 10, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: calc(var(--z-sticky) + 1);
+  animation: fadeIn 0.2s ease;
+}
+
+/* ── Mobile Menu ─────────────────────────────────────────── */
+.mobileMenu {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(360px, 90vw);
+  height: 100dvh;
+  background: var(--color-surface);
+  z-index: calc(var(--z-sticky) + 2);
+  transform: translateX(100%);
+  transition: transform var(--transition-slow);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  box-shadow: var(--shadow-xl);
+}
+
+.mobileMenuOpen {
+  transform: translateX(0);
+}
+
+.mobileMenuHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-5) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  background: linear-gradient(135deg, var(--color-dark), #2C1810);
+}
+
+.mobileMenuTitle {
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+  color: white;
+  font-weight: 700;
+}
+
+.mobileClose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: white;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.mobileClose:hover { background: rgba(255,255,255,0.2); }
+
+.mobileNav {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4) var(--space-4);
+  gap: var(--space-1);
+  flex: 1;
+}
+
+.mobileNavLink {
+  padding: 0.875rem var(--space-4);
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-fast);
+  border-left: 3px solid transparent;
+}
+
+.mobileNavLink:hover {
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  border-left-color: var(--color-gold);
+}
+
+.mobileNavLinkActive {
+  background: var(--color-primary-50);
+  color: var(--color-primary);
+  border-left-color: var(--color-primary);
+  font-weight: 600;
+}
+
+.mobileCtas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--color-border);
+}
+
+.mobileContact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  background: var(--color-surface-alt);
+  border-top: 1px solid var(--color-border);
+}
+
+.mobileContactItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+.mobileContactItem:hover { color: var(--color-primary); }
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .topBarDivider:last-of-type,
+  .topBarItem:last-child { display: none; }
+
+  .desktopNav { display: none; }
+  .navActions .btn--primary { display: none; }
+  .mobileToggle { display: flex; }
+  .navInner { height: 64px; }
+  .logoTagline { display: none; }
+}

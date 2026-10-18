@@ -1,0 +1,18 @@
+.dashWrap {
+  display: flex;
+  min-height: 100vh;
+  background: var(--color-surface-alt);
+}
+
+.content {
+  flex: 1;
+  margin-left: 240px;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Mobile — sidebar becomes bottom drawer on small screens */
+@media (max-width: 768px) {
+  .dashWrap { flex-direction: column; }
+  .content { margin-left: 0; margin-bottom: 64px; }
+}
