@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
-import { count, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { orderItems, orders, paymentRecords, restaurantSettings } from "@/lib/db/schema";
-import { pushOrderEvent } from "@/lib/sse";
+import { orders, paymentRecords, restaurantSettings } from "@/lib/db/schema";
+import { buildDashboardOrderPayload, pushOrderEvent } from "@/lib/sse";
 
 const verifySchema = z.object({
   razorpayOrderId: z.string().min(4).max(120),
@@ -58,29 +58,14 @@ export async function POST(
     })
     .where(eq(paymentRecords.razorpayOrderId, razorpayOrderId));
 
-  const [updatedOrder] = await db
+  await db
     .update(orders)
     .set({ paymentStatus: "paid", updatedAt: new Date() })
-    .where(eq(orders.id, orderId))
-    .returning();
+    .where(eq(orders.id, orderId));
 
-  if (updatedOrder) {
-    const [cntRow] = await db
-      .select({ cnt: count() })
-      .from(orderItems)
-      .where(eq(orderItems.orderId, orderId));
-
-    pushOrderEvent("new_order", {
-      id: updatedOrder.id,
-      displayId: updatedOrder.orderNumber,
-      customerName: updatedOrder.guestName,
-      customerPhone: updatedOrder.guestPhone,
-      orderType: updatedOrder.serviceMode,
-      status: updatedOrder.status,
-      totalPaise: updatedOrder.totalPaise,
-      createdAt: updatedOrder.createdAt.toISOString(),
-      itemCount: cntRow?.cnt ?? 0,
-    });
+  const payload = await buildDashboardOrderPayload(orderId);
+  if (payload) {
+    pushOrderEvent("new_order", payload);
   }
 
   return NextResponse.json({ ok: true, orderId });

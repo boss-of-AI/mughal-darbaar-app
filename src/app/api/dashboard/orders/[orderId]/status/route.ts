@@ -1,14 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { orders, orderItems } from "@/lib/db/schema";
-import { eq, count } from "drizzle-orm";
+import { orders } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { pushOrderEvent } from "@/lib/sse";
+import { buildDashboardOrderPayload, pushOrderEvent } from "@/lib/sse";
 
-const statusSchema = z.object({
-  status: z.enum(["pending", "confirmed", "preparing", "ready", "out_for_delivery", "delivered", "cancelled", "rejected"]),
-});
+const statusSchema = z
+  .object({
+    status: z
+      .enum([
+        "pending",
+        "confirmed",
+        "preparing",
+        "ready",
+        "out_for_delivery",
+        "delivered",
+        "cancelled",
+        "rejected",
+      ])
+      .optional(),
+    paymentStatus: z
+      .enum(["pending", "paid", "failed", "refunded", "pay_at_counter"])
+      .optional(),
+  })
+  .refine((d) => Boolean(d.status || d.paymentStatus), {
+    message: "Provide status or paymentStatus",
+  });
 
 export async function PATCH(
   req: NextRequest,
@@ -24,20 +42,28 @@ export async function PATCH(
   const parsed = statusSchema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid update payload" }, { status: 400 });
   }
 
-  const { status } = parsed.data;
+  const { status, paymentStatus } = parsed.data;
   const now = new Date();
-  const timestamps: Partial<typeof orders.$inferInsert> = { updatedAt: now };
-  if (status === "confirmed") timestamps.acceptedAt = now;
-  if (status === "ready") timestamps.readyAt = now;
-  if (status === "delivered") timestamps.deliveredAt = now;
-  if (status === "cancelled" || status === "rejected") timestamps.cancelledAt = now;
+  const updates: Partial<typeof orders.$inferInsert> = { updatedAt: now };
+
+  if (status) {
+    updates.status = status;
+    if (status === "confirmed") updates.acceptedAt = now;
+    if (status === "ready") updates.readyAt = now;
+    if (status === "delivered") updates.deliveredAt = now;
+    if (status === "cancelled" || status === "rejected") updates.cancelledAt = now;
+  }
+
+  if (paymentStatus) {
+    updates.paymentStatus = paymentStatus;
+  }
 
   const [updated] = await db
     .update(orders)
-    .set({ status, ...timestamps })
+    .set(updates)
     .where(eq(orders.id, orderId))
     .returning();
 
@@ -45,23 +71,10 @@ export async function PATCH(
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
 
-  // Get item count for SSE payload
-  const [itemCountRow] = await db
-    .select({ cnt: count() })
-    .from(orderItems)
-    .where(eq(orderItems.orderId, orderId));
-
-  const payload = {
-    id: updated.id,
-    displayId: updated.orderNumber,
-    customerName: updated.guestName,
-    customerPhone: updated.guestPhone,
-    orderType: updated.serviceMode,
-    status: updated.status,
-    totalPaise: updated.totalPaise,
-    createdAt: updated.createdAt.toISOString(),
-    itemCount: itemCountRow?.cnt ?? 0,
-  };
+  const payload = await buildDashboardOrderPayload(orderId);
+  if (!payload) {
+    return NextResponse.json({ error: "Order not found" }, { status: 404 });
+  }
 
   // Broadcast to all connected kitchen screens
   pushOrderEvent("order_updated", payload);

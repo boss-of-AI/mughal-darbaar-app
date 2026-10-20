@@ -16,7 +16,7 @@ import {
   restaurantTables,
   tableSessions,
 } from "@/lib/db/schema";
-import { pushOrderEvent } from "@/lib/sse";
+import { buildDashboardOrderPayload, pushOrderEvent } from "@/lib/sse";
 
 /**
  * POST /api/orders — public order placement.
@@ -416,17 +416,10 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  pushOrderEvent("new_order", {
-    id: order.id,
-    displayId: order.orderNumber,
-    customerName: order.guestName,
-    customerPhone: order.guestPhone,
-    orderType: order.serviceMode,
-    status: order.status,
-    totalPaise: order.totalPaise,
-    createdAt: order.createdAt.toISOString(),
-    itemCount: lines.length,
-  });
+  const ssePayload = await buildDashboardOrderPayload(order.id);
+  if (ssePayload) {
+    pushOrderEvent("new_order", ssePayload);
+  }
 
   return NextResponse.json(
     {

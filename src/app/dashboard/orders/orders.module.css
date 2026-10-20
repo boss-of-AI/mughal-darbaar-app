@@ -69,13 +69,108 @@
   text-transform: capitalize;
 }
 
+/* Payment Status Banner */
+.paymentBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid;
+}
+.paymentBarLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.paymentLabel {
+  display: block;
+  font-size: var(--text-xs);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.paymentSub {
+  display: block;
+  font-size: 11px;
+  opacity: 0.85;
+  margin-top: 1px;
+}
+.markPaidBtn {
+  background: #059669;
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: filter var(--transition-fast);
+  flex-shrink: 0;
+}
+.markPaidBtn:hover {
+  filter: brightness(1.1);
+}
+.markPaidBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .orderCustomer {
   padding: var(--space-3) var(--space-5);
   border-bottom: 1px solid var(--color-border);
 }
+.customerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
 .customerName { font-size: var(--text-sm); font-weight: 600; color: var(--color-text); }
-.customerPhone { display: block; font-size: var(--text-xs); color: var(--color-primary); text-decoration: none; margin-top: 2px; }
+.customerPhone { font-size: var(--text-xs); color: var(--color-primary); text-decoration: none; font-weight: 600; }
 .customerPhone:hover { text-decoration: underline; }
+.deliveryAddr {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+/* Itemised Dish List */
+.itemsList {
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.itemRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+}
+.itemQtyName {
+  color: var(--color-text);
+  font-weight: 500;
+}
+.itemLinePrice {
+  color: var(--color-text-muted);
+  font-family: monospace;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.specialNote {
+  padding: var(--space-2) var(--space-5);
+  font-size: var(--text-xs);
+  color: #92400E;
+  background: #FFFBEB;
+  border-bottom: 1px solid var(--color-border);
+}
 
 .orderMeta {
   display: flex; align-items: center; justify-content: space-between;

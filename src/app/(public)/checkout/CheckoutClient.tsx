@@ -193,10 +193,16 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
           name: cfg.restaurantName,
           description: `Order ${data.orderNumber}`,
           order_id: data.razorpay.razorpayOrderId,
+          method: {
+            upi: true,
+            card: true,
+            netbanking: true,
+            wallet: true,
+          },
           prefill: {
             name: form.name,
-            contact: form.phone,
-            email: form.email || undefined,
+            contact: `+91${cleanPhone.slice(-10)}`,
+            email: form.email || "guest@mughaldarbaar.in",
           },
           handler: async (resp: RazorpayResponse) => {
             const vRes = await fetch(`/api/orders/${data.orderId}/verify-payment`, {

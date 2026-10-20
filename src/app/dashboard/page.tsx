@@ -36,6 +36,8 @@ export default async function DashboardPage() {
     totalPaise: number;
     status: string;
     orderType: string;
+    paymentStatus: string;
+    paymentMethod: string | null;
     createdAt: Date;
   }[] = [];
   let totalMenuItems = 0;
@@ -64,6 +66,8 @@ export default async function DashboardPage() {
           totalPaise: orders.totalPaise,
           status: orders.status,
           orderType: orders.serviceMode,
+          paymentStatus: orders.paymentStatus,
+          paymentMethod: orders.paymentMethod,
           createdAt: orders.createdAt,
         })
         .from(orders)
@@ -91,12 +95,23 @@ export default async function DashboardPage() {
   const statusColors: Record<string, string> = {
     pending: "#F59E0B",
     confirmed: "#3B82F6",
-    preparing: "#8B5CF6",
-    ready: "#10B981",
+    preparing: "#3B82F6",
+    ready: "#3B82F6",
     out_for_delivery: "#0891B2",
-    delivered: "#6B7280",
+    delivered: "#059669",
     cancelled: "#EF4444",
     rejected: "#DC2626",
+  };
+
+  const statusLabels: Record<string, string> = {
+    pending: "To Accept",
+    confirmed: "Order Placed",
+    preparing: "Order Placed",
+    ready: "Order Placed",
+    out_for_delivery: "Out for Delivery",
+    delivered: "Delivered",
+    cancelled: "Cancelled",
+    rejected: "Rejected",
   };
 
   return (
@@ -144,24 +159,43 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <div className={styles.orderList}>
-              {recentOrders.map((order) => (
-                <Link key={order.id} href="/dashboard/orders" className={styles.orderRow}>
-                  <div className={styles.orderInfo}>
-                    <span className={styles.orderId}>#{order.displayId}</span>
-                    <span className={styles.orderName}>{order.customerName || "Guest"}</span>
-                    <span className={styles.orderType}>{order.orderType}</span>
-                  </div>
-                  <div className={styles.orderRight}>
-                    <span className={styles.orderPrice}>{paise2rupee(order.totalPaise)}</span>
-                    <span
-                      className={styles.orderStatus}
-                      style={{ background: `${statusColors[order.status]}22`, color: statusColors[order.status] }}
-                    >
-                      {order.status}
-                    </span>
-                  </div>
-                </Link>
-              ))}
+              {recentOrders.map((order) => {
+                const isPaid = order.paymentStatus === "paid";
+                const isOnline = order.paymentMethod === "razorpay";
+                const isCod = order.paymentMethod === "cash_on_delivery";
+                const payBadge = isPaid
+                  ? { label: isOnline ? "✓ Paid Online" : "✓ Paid", bg: "#DCFCE7", color: "#15803D" }
+                  : isCod
+                  ? { label: "COD · Collect", bg: "#FEF3C7", color: "#B45309" }
+                  : isOnline
+                  ? { label: "Unpaid Online", bg: "#FEE2E2", color: "#B91C1C" }
+                  : { label: "Counter · Collect", bg: "#E0E7FF", color: "#4338CA" };
+
+                return (
+                  <Link key={order.id} href="/dashboard/orders" className={styles.orderRow}>
+                    <div className={styles.orderInfo}>
+                      <span className={styles.orderId}>#{order.displayId}</span>
+                      <span className={styles.orderName}>{order.customerName || "Guest"}</span>
+                      <span className={styles.orderType}>{order.orderType}</span>
+                    </div>
+                    <div className={styles.orderRight}>
+                      <span className={styles.orderPrice}>{paise2rupee(order.totalPaise)}</span>
+                      <span
+                        className={styles.orderStatus}
+                        style={{ background: payBadge.bg, color: payBadge.color }}
+                      >
+                        {payBadge.label}
+                      </span>
+                      <span
+                        className={styles.orderStatus}
+                        style={{ background: `${statusColors[order.status]}22`, color: statusColors[order.status] }}
+                      >
+                        {statusLabels[order.status] ?? order.status}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           )}
         </div>
