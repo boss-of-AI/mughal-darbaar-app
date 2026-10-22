@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { count, eq, ne, sum } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { orders } from "@/lib/db/schema";
 import { restaurantConfig } from "@/config/restaurant.config";
@@ -17,41 +16,67 @@ export default async function DashboardReportsPage() {
   let totalDeliveryFeePaise = 0;
   let totalRevenuePaise = 0;
   let modeBreakdown: { mode: string; cnt: number; revPaise: number }[] = [];
+  let paymentBreakdown: { label: string; cnt: number; revPaise: number }[] = [];
 
   try {
-    const [totals, byMode] = await Promise.all([
-      db
-        .select({
-          cnt: count(),
-          sub: sum(orders.subtotalPaise),
-          tax: sum(orders.taxPaise),
-          del: sum(orders.deliveryFeePaise),
-          rev: sum(orders.totalPaise),
-        })
-        .from(orders)
-        .where(ne(orders.status, "cancelled")),
-      db
-        .select({
-          mode: orders.serviceMode,
-          cnt: count(),
-          rev: sum(orders.totalPaise),
-        })
-        .from(orders)
-        .where(eq(orders.status, "delivered"))
-        .groupBy(orders.serviceMode),
-    ]);
+    const allOrders = await db.select().from(orders);
 
-    totalOrders = totals[0]?.cnt ?? 0;
-    grossSubtotalPaise = Number(totals[0]?.sub ?? 0);
-    totalGstPaise = Number(totals[0]?.tax ?? 0);
-    totalDeliveryFeePaise = Number(totals[0]?.del ?? 0);
-    totalRevenuePaise = Number(totals[0]?.rev ?? 0);
+    // Exclude cancelled, rejected, or abandoned unpaid online checkout drafts
+    const validOrders = allOrders.filter(
+      (o) =>
+        o.status !== "cancelled" &&
+        o.status !== "rejected" &&
+        !(o.paymentMethod === "razorpay" && o.paymentStatus === "pending")
+    );
 
-    modeBreakdown = byMode.map((row) => ({
-      mode: row.mode,
-      cnt: row.cnt,
-      revPaise: Number(row.rev ?? 0),
+    totalOrders = validOrders.length;
+    for (const o of validOrders) {
+      grossSubtotalPaise += o.subtotalPaise;
+      totalGstPaise += o.taxPaise;
+      totalDeliveryFeePaise += o.deliveryFeePaise;
+      totalRevenuePaise += o.totalPaise;
+    }
+
+    const byModeMap = new Map<string, { cnt: number; revPaise: number }>();
+    for (const o of validOrders) {
+      const cur = byModeMap.get(o.serviceMode) ?? { cnt: 0, revPaise: 0 };
+      cur.cnt += 1;
+      cur.revPaise += o.totalPaise;
+      byModeMap.set(o.serviceMode, cur);
+    }
+    modeBreakdown = Array.from(byModeMap.entries()).map(([mode, v]) => ({
+      mode,
+      cnt: v.cnt,
+      revPaise: v.revPaise,
     }));
+
+    const paidOnline = validOrders.filter(
+      (o) => o.paymentMethod === "razorpay" && o.paymentStatus === "paid"
+    );
+    const paidCash = validOrders.filter(
+      (o) => o.paymentMethod !== "razorpay" && o.paymentStatus === "paid"
+    );
+    const pendingCash = validOrders.filter(
+      (o) => o.paymentStatus !== "paid"
+    );
+
+    paymentBreakdown = [
+      {
+        label: "💳 Paid Online (Razorpay)",
+        cnt: paidOnline.length,
+        revPaise: paidOnline.reduce((s, o) => s + o.totalPaise, 0),
+      },
+      {
+        label: "💵 Paid in Cash (COD / Counter)",
+        cnt: paidCash.length,
+        revPaise: paidCash.reduce((s, o) => s + o.totalPaise, 0),
+      },
+      {
+        label: "⏳ Pending Collection (Active COD / Counter)",
+        cnt: pendingCash.length,
+        revPaise: pendingCash.reduce((s, o) => s + o.totalPaise, 0),
+      },
+    ];
   } catch {
     // DB not connected yet
   }
@@ -61,7 +86,7 @@ export default async function DashboardReportsPage() {
       <div className={styles.header}>
         <h1 className={styles.title}>Sales &amp; GST Reports</h1>
         <p className={styles.subtitle}>
-          Summary of non-cancelled orders, GST collected, and revenue by ordering mode.
+          Summary of valid orders, GST collected, ordering modes, and Online vs. Cash payments.
         </p>
       </div>
 
@@ -88,22 +113,37 @@ export default async function DashboardReportsPage() {
         </div>
       </div>
 
-      <section className={styles.card}>
-        <h2 className={styles.sectionTitle}>Completed Orders by Mode</h2>
-        {modeBreakdown.length === 0 ? (
-          <p className={styles.empty}>No completed orders recorded yet.</p>
-        ) : (
+      <div style={{ display: "grid", gap: "1.5rem" }}>
+        <section className={styles.card}>
+          <h2 className={styles.sectionTitle}>Payment Breakdown (Online vs. Cash)</h2>
           <div className={styles.modeList}>
-            {modeBreakdown.map((m) => (
-              <div key={m.mode} className={styles.modeRow}>
-                <span className={styles.modeName}>{m.mode.replace("_", "-")}</span>
-                <span>{m.cnt} orders</span>
-                <span className={styles.modeRev}>{rupees(m.revPaise)}</span>
+            {paymentBreakdown.map((p) => (
+              <div key={p.label} className={styles.modeRow}>
+                <span className={styles.modeName}>{p.label}</span>
+                <span>{p.cnt} order{p.cnt !== 1 ? "s" : ""}</span>
+                <span className={styles.modeRev}>{rupees(p.revPaise)}</span>
               </div>
             ))}
           </div>
-        )}
-      </section>
+        </section>
+
+        <section className={styles.card}>
+          <h2 className={styles.sectionTitle}>Orders by Service Mode</h2>
+          {modeBreakdown.length === 0 ? (
+            <p className={styles.empty}>No orders recorded yet.</p>
+          ) : (
+            <div className={styles.modeList}>
+              {modeBreakdown.map((m) => (
+                <div key={m.mode} className={styles.modeRow}>
+                  <span className={styles.modeName}>{m.mode.replace("_", "-")}</span>
+                  <span>{m.cnt} order{m.cnt !== 1 ? "s" : ""}</span>
+                  <span className={styles.modeRev}>{rupees(m.revPaise)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   );
 }
