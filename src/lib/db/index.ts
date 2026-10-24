@@ -20,8 +20,10 @@ const resolvedUrl = connectionString || "postgresql://postgres:password@localhos
 // Use a singleton pool in development to avoid connection exhaustion from hot reload
 const globalForPg = globalThis as unknown as { pgPool?: Pool };
 
-const isLocalDb =
-  resolvedUrl.includes("localhost") || resolvedUrl.includes("127.0.0.1");
+const isLocalOrInternalDb =
+  resolvedUrl.includes("localhost") ||
+  resolvedUrl.includes("127.0.0.1") ||
+  resolvedUrl.includes(".railway.internal");
 
 const pool =
   globalForPg.pgPool ??
@@ -31,7 +33,7 @@ const pool =
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 15000,
     keepAlive: true,
-    ssl: isLocalDb ? false : { rejectUnauthorized: false },
+    ssl: isLocalOrInternalDb ? false : { rejectUnauthorized: false },
   });
 
 if (process.env.NODE_ENV !== "production") {
