@@ -13,6 +13,10 @@ const signInSchema = z.object({
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
+  secret:
+    process.env.AUTH_SECRET ||
+    process.env.NEXTAUTH_SECRET ||
+    "mughal-darbaar-prod-secret-9f8e7d6c5b4a3210",
   session: {
     strategy: "jwt", // JWT for API route access
     maxAge: 30 * 24 * 60 * 60, // 30 days
