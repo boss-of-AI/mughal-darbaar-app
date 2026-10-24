@@ -8,4 +8,4 @@ cmds = ["npm install --no-audit --no-fund"]
 cmds = ["npm run build"]
 
 [start]
-cmd = "npm run start"
+cmd = "npx next start -H 0.0.0.0 -p ${PORT:-3000}"
