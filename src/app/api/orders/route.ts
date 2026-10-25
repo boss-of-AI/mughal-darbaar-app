@@ -331,6 +331,12 @@ export async function POST(req: NextRequest) {
       .limit(1);
     if (open) {
       tableSessionId = open.id;
+      if (open.notes === "bill_generated") {
+        await db
+          .update(tableSessions)
+          .set({ notes: null })
+          .where(eq(tableSessions.id, open.id));
+      }
     } else {
       const [created] = await db
         .insert(tableSessions)
@@ -450,6 +456,19 @@ export async function POST(req: NextRequest) {
   const ssePayload = await buildDashboardOrderPayload(order.id);
   if (ssePayload) {
     pushOrderEvent("new_order", ssePayload);
+  }
+
+  // If this Dine-In order belongs to a multi-order table session, update sibling orders' sessionTotalPaise
+  if (tableSessionId) {
+    const siblingOrders = await db
+      .select({ id: orders.id })
+      .from(orders)
+      .where(eq(orders.tableSessionId, tableSessionId));
+    for (const so of siblingOrders) {
+      if (so.id === order.id) continue;
+      const p = await buildDashboardOrderPayload(so.id);
+      if (p) pushOrderEvent("order_updated", p);
+    }
   }
 
   return NextResponse.json(

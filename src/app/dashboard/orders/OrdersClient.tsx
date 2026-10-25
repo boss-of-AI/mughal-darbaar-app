@@ -353,7 +353,27 @@ export default function OrdersClient({ initial }: { initial: Order[] }) {
 
     es.addEventListener("bill_generated", (e) => {
       const updated: Order = JSON.parse(e.data);
-      setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+      setOrders((prev) =>
+        prev.map((o) => {
+          if (o.id === updated.id) return updated;
+          if (
+            updated.tableSessionId &&
+            o.tableSessionId === updated.tableSessionId &&
+            o.status !== "cancelled" &&
+            o.status !== "rejected" &&
+            o.status !== "delivered"
+          ) {
+            return {
+              ...o,
+              status: "out_for_delivery",
+              sessionBillGenerated: true,
+              sessionTotalPaise: updated.sessionTotalPaise,
+              sessionOrderCount: updated.sessionOrderCount,
+            };
+          }
+          return o;
+        })
+      );
       setLastPing(new Date());
       setSection("dine_in");
 

@@ -246,7 +246,8 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
     isDineIn &&
     !billGenerated &&
     !isSessionPaid &&
-    sessionOrders.some((so) =>
+    sessionOrders.length > 0 &&
+    sessionOrders.every((so) =>
       ["confirmed", "preparing", "ready", "out_for_delivery"].includes(so.status)
     );
 

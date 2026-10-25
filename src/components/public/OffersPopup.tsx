@@ -11,6 +11,8 @@ export interface PublicOffer {
   discountPct: number;
   categoryId: string | null;
   categoryName: string | null;
+  eligibleItemIds?: string[] | null;
+  eligibleItemNames?: string[] | null;
 }
 
 const SEEN_KEY = "md_seen_offer_ids_v1";

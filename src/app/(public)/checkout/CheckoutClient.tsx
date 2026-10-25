@@ -55,7 +55,7 @@ const rupees = (p: number) => `₹${(p / 100).toLocaleString("en-IN", { maximumF
 
 export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
   const router = useRouter();
-  const { lines, subtotalPaise, tableToken, add, remove, clear } = useCart();
+  const { lines, subtotalPaise, tableToken, add, remove, clear, setTableToken } = useCart();
 
   const modes: { id: Mode; label: string; on: boolean }[] = [
     { id: "delivery", label: "🛵 Delivery", on: cfg.deliveryEnabled && !tableToken },
@@ -145,8 +145,17 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
   const matchedOffer = offers.find(
     (o) => o.code.toUpperCase() === couponCode.trim().toUpperCase()
   );
+  const eligibleSubtotalPaise = matchedOffer
+    ? !matchedOffer.categoryId
+      ? subtotalPaise
+      : lines.reduce((sum, l) => {
+          const byId = matchedOffer.eligibleItemIds?.includes(l.itemId);
+          const byName = matchedOffer.eligibleItemNames?.includes(l.name.toLowerCase());
+          return byId || byName ? sum + l.unitPricePaise * l.quantity : sum;
+        }, 0)
+    : 0;
   const discountPaise = matchedOffer
-    ? Math.round((subtotalPaise * matchedOffer.discountPct) / 100)
+    ? Math.round((eligibleSubtotalPaise * matchedOffer.discountPct) / 100)
     : 0;
 
   // Display-only math; the server recomputes and is the source of truth.
@@ -320,7 +329,40 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
       <div className={styles.grid}>
         <form onSubmit={submit} noValidate className={styles.card}>
           {tableToken ? (
-            <p className={styles.note}>🪑 Dine-in order — pay at the counter after your meal.</p>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: "0.5rem",
+                padding: "0.75rem 1rem",
+                borderRadius: "10px",
+                background: "#FFFBEB",
+                border: "1px solid #F59E0B",
+                marginBottom: "0.75rem",
+              }}
+            >
+              <span style={{ fontSize: "0.88rem", fontWeight: 700, color: "#92400E" }}>
+                🪑 Dine-in Table Order — Final bill paid at counter after your meal.
+              </span>
+              <button
+                type="button"
+                onClick={() => setTableToken(null)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "#B45309",
+                  fontSize: "0.76rem",
+                  fontWeight: 700,
+                  textDecoration: "underline",
+                  cursor: "pointer",
+                  padding: 0,
+                }}
+              >
+                Switch to Online Delivery / Pickup
+              </button>
+            </div>
           ) : (
             <div role="radiogroup" aria-label="Order type" className={styles.modes}>
               {available.map((m) => (
@@ -456,9 +498,15 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
                 </button>
               )}
             </div>
-            {matchedOffer && (
+            {matchedOffer && discountPaise > 0 && (
               <p style={{ fontSize: "0.78rem", color: "#059669", fontWeight: 700, marginTop: "0.35rem" }}>
                 ✓ {matchedOffer.code} applied ({matchedOffer.discountPct}% OFF · {matchedOffer.categoryName || "All Items"})
+              </p>
+            )}
+            {matchedOffer && discountPaise === 0 && (
+              <p style={{ fontSize: "0.78rem", color: "#B45309", fontWeight: 600, marginTop: "0.35rem" }}>
+                ℹ️ Code {matchedOffer.code} gives {matchedOffer.discountPct}% OFF on{" "}
+                <strong>{matchedOffer.categoryName}</strong> dishes (none in cart yet).
               </p>
             )}
             {offers.length > 0 && !matchedOffer && (
