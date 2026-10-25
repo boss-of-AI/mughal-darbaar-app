@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart";
+import { ACTIVE_COUPON_KEY, type PublicOffer } from "@/components/public/OffersPopup";
 import styles from "./checkout.module.css";
 
 interface Cfg {
@@ -72,24 +73,81 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
   const [payChoice, setPayChoice] = useState<PayChoice>(
     cfg.onlinePaymentEnabled ? "razorpay" : "offline"
   );
-  const [form, setForm] = useState({
-    name: "",
-    phone: "",
-    email: "",
-    line1: "",
-    line2: "",
-    landmark: "",
-    city: "Mumbai",
-    pincode: "",
-    notes: "",
+  const [form, setForm] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const savedGuest = window.localStorage.getItem("md_guest_info");
+        if (savedGuest) {
+          const g = JSON.parse(savedGuest) as { name?: string; phone?: string; email?: string };
+          return {
+            name: g.name || "",
+            phone: g.phone || "",
+            email: g.email || "",
+            line1: "",
+            line2: "",
+            landmark: "",
+            city: "Mumbai",
+            pincode: "",
+            notes: "",
+          };
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    return {
+      name: "",
+      phone: "",
+      email: "",
+      line1: "",
+      line2: "",
+      landmark: "",
+      city: "Mumbai",
+      pincode: "",
+      notes: "",
+    };
   });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [offers, setOffers] = useState<PublicOffer[]>([]);
+  const [couponCode, setCouponCode] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        return window.localStorage.getItem(ACTIVE_COUPON_KEY) || "";
+      } catch {
+        return "";
+      }
+    }
+    return "";
+  });
+
+  useEffect(() => {
+    fetch("/api/offers", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d.offers)) setOffers(d.offers);
+      })
+      .catch(() => {});
+
+    const onApplied = (e: Event) => {
+      const code = (e as CustomEvent<string>).detail;
+      if (code) setCouponCode(code);
+    };
+    window.addEventListener("md_coupon_applied", onApplied);
+    return () => window.removeEventListener("md_coupon_applied", onApplied);
+  }, []);
 
   const set =
     (k: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const matchedOffer = offers.find(
+    (o) => o.code.toUpperCase() === couponCode.trim().toUpperCase()
+  );
+  const discountPaise = matchedOffer
+    ? Math.round((subtotalPaise * matchedOffer.discountPct) / 100)
+    : 0;
 
   // Display-only math; the server recomputes and is the source of truth.
   const free = cfg.freeDeliveryAbovePaise;
@@ -99,8 +157,9 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
         ? 0
         : cfg.deliveryFeePaise
       : 0;
-  const tax = Math.round(((subtotalPaise + deliveryFee) * cfg.gstRatePct) / 100);
-  const total = subtotalPaise + deliveryFee + tax;
+  const taxable = Math.max(0, subtotalPaise - discountPaise) + deliveryFee;
+  const tax = Math.round((taxable * cfg.gstRatePct) / 100);
+  const total = Math.max(0, subtotalPaise - discountPaise) + deliveryFee + tax;
   const belowMin = mode === "delivery" && subtotalPaise < cfg.minimumOrderPaise;
 
   const effectivePaymentMethod =
@@ -142,12 +201,21 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
 
     setBusy(true);
     try {
+      try {
+        window.localStorage.setItem(
+          "md_guest_info",
+          JSON.stringify({ name: form.name, phone: form.phone, email: form.email })
+        );
+      } catch {
+        /* ignore */
+      }
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           serviceMode: mode,
           paymentMethod: effectivePaymentMethod,
+          couponCode: couponCode.trim() || undefined,
           items: lines.map((l) => ({
             menuItemId: l.itemId,
             name: l.name,
@@ -354,7 +422,76 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
             </div>
           ))}
           <hr />
+          {/* Offer / Coupon Box */}
+          <div style={{ marginBottom: "0.75rem" }}>
+            <label
+              htmlFor="co-coupon"
+              style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, marginBottom: "0.35rem" }}
+            >
+              🎁 Have a Coupon / Offer Code?
+            </label>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <input
+                id="co-coupon"
+                className="form-input"
+                placeholder="Enter code (e.g. BIRYANI20)"
+                value={couponCode}
+                onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                style={{ textTransform: "uppercase", fontFamily: "monospace", fontWeight: 700 }}
+              />
+              {couponCode && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCouponCode("");
+                    try {
+                      window.localStorage.removeItem(ACTIVE_COUPON_KEY);
+                    } catch {
+                      /* ignore */
+                    }
+                  }}
+                  className="btn btn--secondary btn--sm"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            {matchedOffer && (
+              <p style={{ fontSize: "0.78rem", color: "#059669", fontWeight: 700, marginTop: "0.35rem" }}>
+                ✓ {matchedOffer.code} applied ({matchedOffer.discountPct}% OFF · {matchedOffer.categoryName || "All Items"})
+              </p>
+            )}
+            {offers.length > 0 && !matchedOffer && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginTop: "0.5rem" }}>
+                {offers.map((o) => (
+                  <button
+                    key={o.id}
+                    type="button"
+                    onClick={() => setCouponCode(o.code)}
+                    style={{
+                      background: "#FEF3C7",
+                      color: "#92400E",
+                      border: "1px dashed #D97706",
+                      borderRadius: "6px",
+                      padding: "3px 8px",
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Tap to apply: {o.code} ({o.discountPct}% OFF)
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <div className={styles.line}><span>Subtotal</span><span>{rupees(subtotalPaise)}</span></div>
+          {discountPaise > 0 && (
+            <div className={styles.line} style={{ color: "#059669", fontWeight: 700 }}>
+              <span>Discount ({matchedOffer?.code})</span>
+              <span>−{rupees(discountPaise)}</span>
+            </div>
+          )}
           {mode === "delivery" && <div className={styles.line}><span>Delivery</span><span>{deliveryFee === 0 ? "FREE" : rupees(deliveryFee)}</span></div>}
           <div className={styles.line}><span>GST ({cfg.gstRatePct}%)</span><span>{rupees(tax)}</span></div>
           <div className={`${styles.line} ${styles.total}`}><span>Total</span><span>{rupees(total)}</span></div>

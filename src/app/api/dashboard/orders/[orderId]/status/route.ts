@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { orders } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { orders, tableSessions } from "@/lib/db/schema";
+import { eq, and, notInArray } from "drizzle-orm";
 import { z } from "zod";
 import { buildDashboardOrderPayload, pushOrderEvent } from "@/lib/sse";
 
@@ -47,6 +47,12 @@ export async function PATCH(
 
   const { status, paymentStatus } = parsed.data;
   const now = new Date();
+
+  const [existing] = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+  if (!existing) {
+    return NextResponse.json({ error: "Order not found" }, { status: 404 });
+  }
+
   const updates: Partial<typeof orders.$inferInsert> = { updatedAt: now };
 
   if (status) {
@@ -59,6 +65,50 @@ export async function PATCH(
 
   if (paymentStatus) {
     updates.paymentStatus = paymentStatus;
+    if (existing.serviceMode === "dine_in" && paymentStatus === "paid") {
+      updates.status = "delivered";
+      updates.deliveredAt = now;
+    }
+  }
+
+  // If this is a Dine-In order being marked Paid / Completed at Counter, settle all orders in the same tableSessionId
+  if (
+    existing.serviceMode === "dine_in" &&
+    existing.tableSessionId &&
+    (paymentStatus === "paid" || status === "delivered")
+  ) {
+    await db
+      .update(orders)
+      .set({
+        paymentStatus: "paid",
+        status: "delivered",
+        deliveredAt: now,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(orders.tableSessionId, existing.tableSessionId),
+          notInArray(orders.status, ["cancelled", "rejected"])
+        )
+      );
+
+    await db
+      .update(tableSessions)
+      .set({ status: "closed", closedAt: now, notes: "paid_and_closed" })
+      .where(eq(tableSessions.id, existing.tableSessionId));
+
+    const sessionOrders = await db
+      .select({ id: orders.id })
+      .from(orders)
+      .where(eq(orders.tableSessionId, existing.tableSessionId));
+
+    for (const so of sessionOrders) {
+      const p = await buildDashboardOrderPayload(so.id);
+      if (p) pushOrderEvent("order_updated", p);
+    }
+
+    const payload = await buildDashboardOrderPayload(orderId);
+    return NextResponse.json(payload);
   }
 
   const [updated] = await db
@@ -69,6 +119,19 @@ export async function PATCH(
 
   if (!updated) {
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
+  }
+
+  // If a dine-in order is cancelled/rejected and has a tableSessionId, refresh other orders in that session so sessionTotalPaise updates
+  if (existing.tableSessionId && (status === "cancelled" || status === "rejected")) {
+    const sessionOrders = await db
+      .select({ id: orders.id })
+      .from(orders)
+      .where(eq(orders.tableSessionId, existing.tableSessionId));
+
+    for (const so of sessionOrders) {
+      const p = await buildDashboardOrderPayload(so.id);
+      if (p) pushOrderEvent("order_updated", p);
+    }
   }
 
   const payload = await buildDashboardOrderPayload(orderId);

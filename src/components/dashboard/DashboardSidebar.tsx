@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
   LayoutDashboard, ShoppingBag, UtensilsCrossed,
-  Settings, Users, QrCode, BarChart3, LogOut, ChevronRight
+  Settings, Users, QrCode, BarChart3, LogOut, ChevronRight, Tag
 } from "lucide-react";
 import { restaurantConfig } from "@/config/restaurant.config";
 import styles from "./DashboardSidebar.module.css";
@@ -14,6 +14,7 @@ const navItems = [
   { href: "/dashboard",          icon: LayoutDashboard,  label: "Overview",       exact: true },
   { href: "/dashboard/orders",   icon: ShoppingBag,      label: "Orders",         badge: "live" },
   { href: "/dashboard/menu",     icon: UtensilsCrossed,  label: "Menu Manager" },
+  { href: "/dashboard/offers",   icon: Tag,              label: "Offers & Coupons" },
   { href: "/dashboard/tables",   icon: QrCode,           label: "Tables & QR" },
   { href: "/dashboard/reports",  icon: BarChart3,        label: "Reports" },
   { href: "/dashboard/staff",    icon: Users,            label: "Staff",          ownerOnly: true },

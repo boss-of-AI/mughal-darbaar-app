@@ -9,6 +9,7 @@ import {
   addOnOptions,
   itemVariants,
   menuItems,
+  offers,
   orderItems,
   orders,
   paymentRecords,
@@ -68,6 +69,7 @@ const bodySchema = z
       })
       .optional(),
     tableToken: z.string().min(16).max(128).optional(),
+    couponCode: z.string().trim().max(30).optional(),
     specialInstructions: z.string().trim().max(500).optional(),
   })
   .superRefine((v, ctx) => {
@@ -264,16 +266,45 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // ── Fees & GST (GST applies to subtotal − discount + delivery fee) ──
-  const discount = 0;
+  // ── Category Offer / Coupon Discount & GST ─────────────────
+  let discount = 0;
+  if (input.couponCode) {
+    try {
+      const cleanCode = input.couponCode.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (cleanCode) {
+        const [activeOffer] = await db
+          .select()
+          .from(offers)
+          .where(and(eq(offers.code, cleanCode), eq(offers.isActive, true)))
+          .limit(1);
+
+        if (activeOffer) {
+          const eligibleSubtotal = lines.reduce((sum, l) => {
+            if (!activeOffer.categoryId) return sum + l.totalPaise;
+            const dbItem = l.menuItemId ? itemById.get(l.menuItemId) : undefined;
+            if (dbItem && dbItem.categoryId === activeOffer.categoryId) {
+              return sum + l.totalPaise;
+            }
+            return sum;
+          }, 0);
+
+          discount = Math.round((eligibleSubtotal * activeOffer.discountPct) / 100);
+        }
+      }
+    } catch {
+      /* ignore if offers table not migrated yet */
+    }
+  }
+
   let deliveryFee = 0;
   if (input.serviceMode === "delivery") {
     const free = settings.freeDeliveryAbovePaise;
     deliveryFee = free != null && subtotal >= free ? 0 : settings.deliveryFeePaise;
   }
   const gstRate = Number(settings.gstRatePct);
-  const tax = Math.round(((subtotal - discount + deliveryFee) * gstRate) / 100);
-  const total = subtotal - discount + deliveryFee + tax;
+  const taxableAmount = Math.max(0, subtotal - discount) + deliveryFee;
+  const tax = Math.round((taxableAmount * gstRate) / 100);
+  const total = Math.max(0, subtotal - discount) + deliveryFee + tax;
 
   // ── Dine-in table + session ────────────────────────────────
   let tableId: string | null = null;

@@ -466,6 +466,21 @@ export const sseEvents = pgTable(
   (t) => [index("sse_events_created_idx").on(t.createdAt)]
 );
 
+// ── Category Offers / Discounts / Coupons ─────────────────────
+
+export const offers = pgTable("offers", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: text("title").notNull(), // e.g. "20% OFF on All Biryanis"
+  code: text("code").notNull().unique(), // e.g. "BIRYANI20"
+  discountPct: integer("discount_pct").notNull(), // 1 to 90 (%)
+  categoryId: uuid("category_id").references(() => menuCategories.id, {
+    onDelete: "cascade",
+  }), // null = All Categories
+  categoryName: text("category_name"), // e.g. "Biryanis" or "All Categories"
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // ── Relations ─────────────────────────────────────────────────
 
 export const menuCategoriesRelations = relations(
