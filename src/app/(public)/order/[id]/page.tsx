@@ -269,9 +269,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
 
   const isRefundEligible =
     (order.status === "rejected" || order.status === "cancelled") &&
-    (order.paymentMethod === "razorpay" ||
-      order.paymentStatus === "paid" ||
-      order.paymentStatus === "refunded");
+    (order.paymentStatus === "paid" || order.paymentStatus === "refunded");
 
   return (
     <main style={{ maxWidth: 640, margin: "0 auto", padding: "6rem 1rem 4rem" }}>

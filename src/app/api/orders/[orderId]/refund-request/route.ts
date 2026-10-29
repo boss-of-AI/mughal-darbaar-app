@@ -55,14 +55,12 @@ export async function POST(
     );
   }
 
-  const isOnlinePaid =
-    existing.paymentStatus === "paid" ||
-    existing.paymentStatus === "refunded" ||
-    existing.paymentMethod === "razorpay";
+  const isPaid =
+    existing.paymentStatus === "paid" || existing.paymentStatus === "refunded";
 
-  if (!isOnlinePaid) {
+  if (!isPaid) {
     return NextResponse.json(
-      { error: "Only online-paid orders are eligible for a refund token." },
+      { error: "Only paid orders that were rejected or cancelled are eligible for a refund token." },
       { status: 400 }
     );
   }

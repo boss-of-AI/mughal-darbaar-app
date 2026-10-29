@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { orders, menuItems } from "@/lib/db/schema";
-import { eq, gte, sql, count, sum } from "drizzle-orm";
+import { eq, gte, sql, count } from "drizzle-orm";
 import { restaurantConfig } from "@/config/restaurant.config";
 import {
   ShoppingBag, IndianRupee, TrendingUp, Clock, ChevronRight
@@ -46,11 +46,13 @@ export default async function DashboardPage() {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
-    const [todayStats, pendingCount, recent, menuCount] = await Promise.all([
+    const [todayRows, pendingCount, recent, menuCount] = await Promise.all([
       db
         .select({
-          cnt: count(),
-          rev: sum(orders.totalPaise),
+          totalPaise: orders.totalPaise,
+          status: orders.status,
+          paymentMethod: orders.paymentMethod,
+          paymentStatus: orders.paymentStatus,
         })
         .from(orders)
         .where(gte(orders.createdAt, todayStart)),
@@ -76,8 +78,16 @@ export default async function DashboardPage() {
       db.select({ cnt: count() }).from(menuItems).where(eq(menuItems.status, "available")),
     ]);
 
-    todayOrders = todayStats[0]?.cnt ?? 0;
-    todayRevenuePaise = Number(todayStats[0]?.rev ?? 0);
+    const validToday = todayRows.filter(
+      (o) =>
+        o.status !== "cancelled" &&
+        o.status !== "rejected" &&
+        o.paymentStatus !== "refunded" &&
+        !(o.paymentMethod === "razorpay" && o.paymentStatus === "pending")
+    );
+
+    todayOrders = validToday.length;
+    todayRevenuePaise = validToday.reduce((s, o) => s + o.totalPaise, 0);
     pendingOrders = pendingCount[0]?.cnt ?? 0;
     recentOrders = recent;
     totalMenuItems = menuCount[0]?.cnt ?? 0;

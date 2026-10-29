@@ -460,6 +460,22 @@ export default function OrdersClient({
       }
     });
 
+    es.addEventListener("refund_requested", (e) => {
+      const updated: Order = JSON.parse(e.data);
+      setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+      setLastPing(new Date());
+      if (soundEnabledRef.current) {
+        playOrderChime("bill_generated");
+      }
+    });
+
+    es.addEventListener("store_status_updated", (e) => {
+      const nextStatus: StoreAvailabilityResult = JSON.parse(e.data);
+      setStoreStatus(nextStatus);
+      setOpenTimeInput(nextStatus.todayOpen);
+      setCloseTimeInput(nextStatus.todayClose);
+    });
+
     es.onerror = () => setConnected(false);
 
     return () => es.close();
@@ -1386,11 +1402,9 @@ export default function OrdersClient({
                     </button>
                   )}
 
-                {/* Owner-to-Customer Refund Token Verification Portal (for Rejected/Cancelled Online-Paid Orders) */}
+                {/* Owner-to-Customer Refund Token Verification Portal (for Rejected/Cancelled Paid Orders) */}
                 {(order.status === "rejected" || order.status === "cancelled") &&
-                  (order.paymentMethod === "razorpay" ||
-                    order.paymentStatus === "paid" ||
-                    order.paymentStatus === "refunded") && (
+                  (order.paymentStatus === "paid" || order.paymentStatus === "refunded") && (
                     <div
                       style={{
                         padding: "0.85rem 1rem",

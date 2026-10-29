@@ -642,10 +642,9 @@ export default function ProfileClient() {
                       ))}
                     </div>
 
-                    {/* Refund Token Status / Generator for Rejected Online-Paid Orders */}
+                    {/* Refund Token Status / Generator for Rejected Paid Orders */}
                     {(order.status === "rejected" || order.status === "cancelled") &&
-                      (order.paymentMethod === "razorpay" ||
-                        order.paymentStatus === "paid" ||
+                      (order.paymentStatus === "paid" ||
                         order.paymentStatus === "refunded") && (
                         <div
                           style={{

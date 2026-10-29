@@ -21,17 +21,21 @@ export default async function DashboardReportsPage() {
   try {
     const allOrders = await db.select().from(orders);
 
-    // Exclude cancelled, rejected, or abandoned unpaid online checkout drafts
+    // Exclude cancelled, rejected, refunded, or abandoned unpaid online checkout drafts
     const validOrders = allOrders.filter(
       (o) =>
         o.status !== "cancelled" &&
         o.status !== "rejected" &&
+        o.paymentStatus !== "refunded" &&
         !(o.paymentMethod === "razorpay" && o.paymentStatus === "pending")
+    );
+    const refundedOrders = allOrders.filter(
+      (o) => o.paymentStatus === "refunded" || o.refundStatus === "processed"
     );
 
     totalOrders = validOrders.length;
     for (const o of validOrders) {
-      grossSubtotalPaise += o.subtotalPaise;
+      grossSubtotalPaise += Math.max(0, o.subtotalPaise - (o.discountPaise ?? 0));
       totalGstPaise += o.taxPaise;
       totalDeliveryFeePaise += o.deliveryFeePaise;
       totalRevenuePaise += o.totalPaise;
@@ -75,6 +79,11 @@ export default async function DashboardReportsPage() {
         label: "⏳ Pending Collection (Active COD / Counter)",
         cnt: pendingCash.length,
         revPaise: pendingCash.reduce((s, o) => s + o.totalPaise, 0),
+      },
+      {
+        label: "💸 Refunded Online Orders (Owner Verified Token)",
+        cnt: refundedOrders.length,
+        revPaise: refundedOrders.reduce((s, o) => s + o.totalPaise, 0),
       },
     ];
   } catch {
