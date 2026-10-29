@@ -96,8 +96,9 @@ function getStatusBadgeConfig(order: Order): {
       return { label: "New · To Accept", icon: Clock, color: "#D97706", bg: "#FEF3C7" };
     case "confirmed":
     case "preparing":
-    case "ready":
       return { label: "Order Placed", icon: CheckCircle, color: "#2563EB", bg: "#DBEAFE" };
+    case "ready":
+      return { label: "Food Ready for Rider", icon: Package, color: "#7C3AED", bg: "#EDE9FE" };
     case "out_for_delivery":
       return { label: "Out for Delivery", icon: Truck, color: "#0891B2", bg: "#CFFAFE" };
     case "delivered":
@@ -270,6 +271,20 @@ function getNextAction(
       };
     case "confirmed":
     case "preparing":
+      if (isChef) {
+        return {
+          nextStatus: "ready",
+          buttonLabel: "🍽️ Mark Food Ready for Dispatch",
+          color: "#7C3AED",
+          icon: Package,
+        };
+      }
+      return {
+        nextStatus: "out_for_delivery",
+        buttonLabel: "🛵 Out for Delivery",
+        color: "#0891B2",
+        icon: Truck,
+      };
     case "ready":
       if (isChef) return null; // Staff/Owner allots & dispatches rider
       return {
@@ -536,10 +551,19 @@ export default function OrdersClient({
   const filtered =
     filter === "all"
       ? activeSectionOrders
-      : activeSectionOrders.filter((o) => o.status === filter);
+      : activeSectionOrders.filter((o) => {
+          if (section === "online" && filter === "confirmed") {
+            return o.status === "confirmed" || o.status === "preparing" || o.status === "ready";
+          }
+          return o.status === filter;
+        });
 
   const counts = activeSectionOrders.reduce((acc, o) => {
-    acc[o.status] = (acc[o.status] ?? 0) + 1;
+    const key =
+      section === "online" && (o.status === "preparing" || o.status === "ready")
+        ? "confirmed"
+        : o.status;
+    acc[key] = (acc[key] ?? 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 

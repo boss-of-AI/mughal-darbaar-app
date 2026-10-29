@@ -31,7 +31,15 @@ export default function LoginPage() {
     if (result?.error) {
       setError("Invalid email or password. Please try again.");
     } else {
-      router.push("/dashboard");
+      let target = "/dashboard";
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        const cb = params.get("callbackUrl");
+        if (cb && cb.startsWith("/")) {
+          target = cb;
+        }
+      }
+      router.push(target);
       router.refresh();
     }
   }

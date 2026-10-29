@@ -41,10 +41,30 @@ export async function POST(
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
 
+  if (
+    session.user.role === "rider" &&
+    existing.riderId &&
+    existing.riderId !== session.user.id
+  ) {
+    return NextResponse.json(
+      { error: "This order is allotted to another delivery rider" },
+      { status: 403 }
+    );
+  }
+
+  const autoAssignRider =
+    session.user.role === "rider" && !existing.riderId
+      ? {
+          riderId: session.user.id,
+          riderName: session.user.name ?? "Delivery Rider",
+        }
+      : {};
+
   if (action === "reached") {
     await db
       .update(orders)
       .set({
+        ...autoAssignRider,
         riderReachedAt: now,
         status: existing.status === "delivered" ? "delivered" : "out_for_delivery",
         updatedAt: now,
@@ -63,6 +83,7 @@ export async function POST(
   await db
     .update(orders)
     .set({
+      ...autoAssignRider,
       paymentStatus: "paid",
       status: "delivered",
       deliveredAt: now,

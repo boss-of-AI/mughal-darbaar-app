@@ -16,8 +16,8 @@ const createStaffSchema = z.object({
 
 export async function POST(req: NextRequest) {
   const session = await auth();
-  if (!session?.user || !["owner", "staff"].includes(session.user.role)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  if (!session?.user || session.user.role !== "owner") {
+    return NextResponse.json({ error: "Only the restaurant owner can add team members" }, { status: 403 });
   }
 
   let body: unknown;

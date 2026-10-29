@@ -17,8 +17,8 @@ const navItems = [
   { href: "/dashboard/menu",     icon: UtensilsCrossed,  label: "Menu Manager",     chefAllowed: true },
   { href: "/dashboard/offers",   icon: Tag,              label: "Offers & Coupons" },
   { href: "/dashboard/tables",   icon: QrCode,           label: "Tables & QR" },
-  { href: "/dashboard/reports",  icon: BarChart3,        label: "Reports" },
-  { href: "/dashboard/staff",    icon: Users,            label: "Staff, Chefs & Riders" },
+  { href: "/dashboard/reports",  icon: BarChart3,        label: "Reports",          ownerOnly: true },
+  { href: "/dashboard/staff",    icon: Users,            label: "Staff, Chefs & Riders", ownerOnly: true },
   { href: "/dashboard/settings", icon: Settings,         label: "Settings",         ownerOnly: true },
 ];
 

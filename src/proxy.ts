@@ -30,10 +30,14 @@ export default auth((req) => {
     }
   }
 
-  // Owner-only settings
-  if (pathname.startsWith("/dashboard/settings")) {
+  // Owner-only management pages (Settings, Staff/Role creation, Financial Reports)
+  if (
+    pathname.startsWith("/dashboard/settings") ||
+    pathname.startsWith("/dashboard/staff") ||
+    pathname.startsWith("/dashboard/reports")
+  ) {
     if (session?.user?.role !== "owner") {
-      return NextResponse.redirect(new URL("/dashboard", req.url));
+      return NextResponse.redirect(new URL("/dashboard/orders", req.url));
     }
   }
 

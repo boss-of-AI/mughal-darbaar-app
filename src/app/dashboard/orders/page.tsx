@@ -115,13 +115,7 @@ export default async function OrdersPage() {
         }));
 
       const normalizedStatus =
-        o.serviceMode === "dine_in"
-          ? o.status === "preparing"
-            ? "confirmed"
-            : o.status
-          : o.status === "preparing" || o.status === "ready"
-          ? "confirmed"
-          : o.status;
+        o.status === "preparing" ? "confirmed" : o.status;
 
       let sessionTotalPaise = o.totalPaise;
       let sessionOrderCount = 1;

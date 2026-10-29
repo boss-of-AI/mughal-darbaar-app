@@ -67,12 +67,15 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
     { id: "dine_in", label: "🪑 Dine-in", on: cfg.dineInEnabled },
   ];
   const available = modes.filter((m) => m.on);
-  const [picked, setPicked] = useState<Mode | null>(null);
-  const mode: Mode = picked
-    ? picked
-    : tableToken
-    ? "dine_in"
-    : (available[0]?.id ?? "pickup");
+  const [onlineSubMode, setOnlineSubMode] = useState<"delivery" | "pickup">(
+    cfg.deliveryEnabled ? "delivery" : "pickup"
+  );
+  const mode: Mode =
+    tableToken && cfg.dineInEnabled
+      ? "dine_in"
+      : available.some((m) => m.id === onlineSubMode)
+      ? onlineSubMode
+      : (available[0]?.id ?? "pickup");
 
   const [payChoice, setPayChoice] = useState<PayChoice>(
     cfg.onlinePaymentEnabled ? "razorpay" : "offline"
@@ -447,12 +450,12 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
                 aria-checked={mode === m.id}
                 className={`${styles.mode} ${mode === m.id ? styles.modeOn : ""}`}
                 onClick={() => {
-                  setPicked(m.id);
                   if (m.id === "dine_in") {
                     if (!tableToken) {
                       setTableToken(tables[0]?.qrToken || "dine-in-table-1-token");
                     }
                   } else {
+                    setOnlineSubMode(m.id);
                     setTableToken(null);
                   }
                 }}
