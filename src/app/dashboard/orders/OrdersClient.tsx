@@ -210,19 +210,26 @@ function getPaymentBadge(order: Order): {
   };
 }
 
-function getNextAction(order: Order): {
+function getNextAction(
+  order: Order,
+  userRole: string
+): {
   nextStatus?: OrderStatus;
   markPaid?: boolean;
   buttonLabel: string;
   color: string;
   icon: React.ComponentType<{ size?: number }>;
 } | null {
+  const isChef = userRole === "chef";
+
   if (order.orderType === "dine_in") {
     switch (order.status) {
       case "pending":
         return {
           nextStatus: "confirmed",
-          buttonLabel: "✓ Accept Order (Mark Order Accepted)",
+          buttonLabel: isChef
+            ? "👨‍🍳 Accept & Start Cooking"
+            : "✓ Accept Order (Mark Order Accepted)",
           color: "#059669",
           icon: CheckCircle,
         };
@@ -235,6 +242,7 @@ function getNextAction(order: Order): {
           icon: Package,
         };
       case "out_for_delivery":
+        if (isChef) return null; // Counter staff settles final bill at counter
         return {
           nextStatus: "delivered",
           markPaid: true,
@@ -254,13 +262,16 @@ function getNextAction(order: Order): {
     case "pending":
       return {
         nextStatus: "confirmed",
-        buttonLabel: "✓ Accept Order (Mark as Order Placed)",
+        buttonLabel: isChef
+          ? "👨‍🍳 Accept & Start Cooking"
+          : "✓ Accept Order (Mark as Order Placed)",
         color: "#059669",
         icon: CheckCircle,
       };
     case "confirmed":
     case "preparing":
     case "ready":
+      if (isChef) return null; // Staff/Owner allots & dispatches rider
       return {
         nextStatus: "out_for_delivery",
         buttonLabel: "🛵 Out for Delivery",
@@ -292,9 +303,11 @@ const dineInTabs: { key: OrderStatus | "all"; label: string }[] = [
 export default function OrdersClient({
   initial,
   riders = [],
+  userRole = "staff",
 }: {
   initial: Order[];
   riders?: RiderOption[];
+  userRole?: string;
 }) {
   const [orders, setOrders] = useState<Order[]>(initial);
   const [selectedRiders, setSelectedRiders] = useState<Record<string, string>>({});
@@ -535,7 +548,9 @@ export default function OrdersClient({
       {/* Header */}
       <div className={styles.pageHeader}>
         <div>
-          <h1 className={styles.pageTitle}>Live Orders</h1>
+          <h1 className={styles.pageTitle}>
+            {userRole === "chef" ? "👨‍🍳 Kitchen Order Board" : "Live Orders"}
+          </h1>
           <p className={styles.pageSubtitle}>
             <span
               className={`${styles.connDot} ${
@@ -544,6 +559,22 @@ export default function OrdersClient({
             />
             {connected ? "Live — updates in real time" : "Connecting…"}
             <span className={styles.lastPing}> · Last: {lastPing.toLocaleTimeString()}</span>
+            {userRole === "chef" && (
+              <span
+                style={{
+                  marginLeft: "0.5rem",
+                  padding: "0.18rem 0.55rem",
+                  borderRadius: 999,
+                  background: "#FFFBEB",
+                  border: "1px solid #FCD34D",
+                  color: "#B45309",
+                  fontWeight: 800,
+                  fontSize: "0.72rem",
+                }}
+              >
+                👨‍🍳 Chef Mode: Kitchen Prep &amp; Dish Readiness
+              </span>
+            )}
           </p>
         </div>
         <div className={styles.headerActions}>
@@ -658,7 +689,7 @@ export default function OrdersClient({
           {filtered.map((order) => {
             const cfg = getStatusBadgeConfig(order);
             const StatusIcon = cfg.icon;
-            const nextAction = getNextAction(order);
+            const nextAction = getNextAction(order, userRole);
             const isUpdating = updating === order.id;
             const payBadge = getPaymentBadge(order);
 
@@ -725,6 +756,7 @@ export default function OrdersClient({
                     </div>
                   </div>
                   {!payBadge.isPaid &&
+                    userRole !== "chef" &&
                     order.status !== "cancelled" &&
                     order.status !== "rejected" && (
                       <button
@@ -827,7 +859,9 @@ export default function OrdersClient({
                           )}
                         </div>
 
-                        {order.status !== "delivered" && riders.length > 0 && (
+                        {order.status !== "delivered" &&
+                          userRole !== "chef" &&
+                          riders.length > 0 && (
                           <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
                             <select
                               aria-label="Select Delivery Rider"

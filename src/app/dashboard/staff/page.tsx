@@ -6,7 +6,9 @@ import { users } from "@/lib/db/schema";
 import { restaurantConfig } from "@/config/restaurant.config";
 import StaffClient, { type StaffMember } from "./StaffClient";
 
-export const metadata: Metadata = { title: `Staff & Riders — ${restaurantConfig.name}` };
+export const metadata: Metadata = {
+  title: `Staff, Chefs & Riders — ${restaurantConfig.name}`,
+};
 export const dynamic = "force-dynamic";
 
 export default async function DashboardStaffPage() {
@@ -23,9 +25,9 @@ export default async function DashboardStaffPage() {
         isActive: users.isActive,
       })
       .from(users)
-      .where(inArray(users.role, ["owner", "staff", "rider"]));
+      .where(inArray(users.role, ["owner", "staff", "chef", "rider"]));
 
-    // Ensure at least one default Rider account exists out-of-the-box
+    // Ensure default Rider account exists out-of-the-box
     if (!rows.some((r) => r.role === "rider")) {
       const passwordHash = await bcrypt.hash("Rider@1234", 12);
       const [createdRider] = await db
@@ -52,9 +54,63 @@ export default async function DashboardStaffPage() {
       }
     }
 
+    // Ensure default Chef account exists out-of-the-box
+    if (!rows.some((r) => r.role === "chef")) {
+      const passwordHash = await bcrypt.hash("Chef@1234", 12);
+      const [createdChef] = await db
+        .insert(users)
+        .values({
+          name: "Ustad Karim (Head Chef)",
+          email: "chef@mughaldarbaar.in",
+          phone: "9876543212",
+          passwordHash,
+          role: "chef",
+          isActive: true,
+        })
+        .onConflictDoNothing()
+        .returning({
+          id: users.id,
+          name: users.name,
+          email: users.email,
+          phone: users.phone,
+          role: users.role,
+          isActive: users.isActive,
+        });
+      if (createdChef) {
+        rows = [...rows, createdChef];
+      }
+    }
+
+    // Ensure default Counter Staff account exists out-of-the-box
+    if (!rows.some((r) => r.role === "staff")) {
+      const passwordHash = await bcrypt.hash("Staff@1234", 12);
+      const [createdStaff] = await db
+        .insert(users)
+        .values({
+          name: "Aamir Baig (Counter Staff)",
+          email: "staff@mughaldarbaar.in",
+          phone: "9876543213",
+          passwordHash,
+          role: "staff",
+          isActive: true,
+        })
+        .onConflictDoNothing()
+        .returning({
+          id: users.id,
+          name: users.name,
+          email: users.email,
+          phone: users.phone,
+          role: users.role,
+          isActive: users.isActive,
+        });
+      if (createdStaff) {
+        rows = [...rows, createdStaff];
+      }
+    }
+
     staffList = rows.map((r) => ({
       id: r.id,
-      name: r.name ?? "Staff",
+      name: r.name ?? "Team Member",
       email: r.email ?? "",
       phone: r.phone ?? null,
       role: r.role,

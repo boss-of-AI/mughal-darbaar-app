@@ -15,7 +15,7 @@ import { sseClients } from "@/lib/sse";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
-  if (!session?.user || !["owner", "staff", "rider"].includes(session.user.role)) {
+  if (!session?.user || !["owner", "staff", "chef", "rider"].includes(session.user.role)) {
     return new Response("Unauthorized", { status: 401 });
   }
 

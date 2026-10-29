@@ -12,13 +12,13 @@ import styles from "./DashboardSidebar.module.css";
 
 const navItems = [
   { href: "/dashboard",          icon: LayoutDashboard,  label: "Overview",         exact: true },
-  { href: "/dashboard/orders",   icon: ShoppingBag,      label: "Orders",           badge: "live" },
+  { href: "/dashboard/orders",   icon: ShoppingBag,      label: "Orders",           badge: "live", chefAllowed: true },
   { href: "/dashboard/rider",    icon: Navigation,       label: "Rider Portal",     badge: "live", riderAllowed: true },
-  { href: "/dashboard/menu",     icon: UtensilsCrossed,  label: "Menu Manager" },
+  { href: "/dashboard/menu",     icon: UtensilsCrossed,  label: "Menu Manager",     chefAllowed: true },
   { href: "/dashboard/offers",   icon: Tag,              label: "Offers & Coupons" },
   { href: "/dashboard/tables",   icon: QrCode,           label: "Tables & QR" },
   { href: "/dashboard/reports",  icon: BarChart3,        label: "Reports" },
-  { href: "/dashboard/staff",    icon: Users,            label: "Staff & Riders" },
+  { href: "/dashboard/staff",    icon: Users,            label: "Staff, Chefs & Riders" },
   { href: "/dashboard/settings", icon: Settings,         label: "Settings",         ownerOnly: true },
 ];
 
@@ -32,12 +32,19 @@ export default function DashboardSidebar({ userRole, userName }: Props) {
 
   const visibleItems = navItems.filter((item) => {
     if (userRole === "rider") return Boolean(item.riderAllowed);
+    if (userRole === "chef") return Boolean(item.chefAllowed);
     if (item.ownerOnly && userRole !== "owner") return false;
     return true;
   });
 
   const portalLabel =
-    userRole === "owner" ? "Owner" : userRole === "rider" ? "Delivery Rider" : "Staff";
+    userRole === "owner"
+      ? "Owner"
+      : userRole === "rider"
+      ? "Delivery Rider"
+      : userRole === "chef"
+      ? "Kitchen Chef"
+      : "Counter Staff";
 
   return (
     <aside className={styles.sidebar} aria-label="Dashboard navigation">

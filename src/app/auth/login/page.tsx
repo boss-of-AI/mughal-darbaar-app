@@ -48,8 +48,10 @@ export default function LoginPage() {
           <p className={styles.logoSub}>Restaurant Dashboard</p>
         </div>
 
-        <h2 className={styles.heading}>Staff &amp; Rider Login</h2>
-        <p className={styles.subheading}>Sign in with your Owner, Staff, or Delivery Rider credentials.</p>
+        <h2 className={styles.heading}>Staff, Chef &amp; Rider Login</h2>
+        <p className={styles.subheading}>
+          Sign in with your Owner, Counter Staff, Kitchen Chef, or Delivery Rider credentials.
+        </p>
 
         {error && (
           <div className={styles.errorBanner} role="alert">

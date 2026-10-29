@@ -5,12 +5,12 @@ export default auth((req) => {
   const { pathname } = req.nextUrl;
   const session = req.auth;
 
-  // Dashboard routes require owner, staff, or rider
+  // Dashboard routes require owner, staff, chef, or rider
   if (pathname.startsWith("/dashboard")) {
     if (!session?.user) {
       return NextResponse.redirect(new URL("/auth/login", req.url));
     }
-    if (!["owner", "staff", "rider"].includes(session.user.role)) {
+    if (!["owner", "staff", "chef", "rider"].includes(session.user.role)) {
       return NextResponse.redirect(new URL("/", req.url));
     }
     // Riders are restricted to the Rider Delivery & Navigation Portal
@@ -19,6 +19,14 @@ export default auth((req) => {
       !pathname.startsWith("/dashboard/rider")
     ) {
       return NextResponse.redirect(new URL("/dashboard/rider", req.url));
+    }
+    // Chefs are routed to Kitchen Live Orders (/dashboard/orders) & Menu Stock (/dashboard/menu)
+    if (
+      session.user.role === "chef" &&
+      !pathname.startsWith("/dashboard/orders") &&
+      !pathname.startsWith("/dashboard/menu")
+    ) {
+      return NextResponse.redirect(new URL("/dashboard/orders", req.url));
     }
   }
 

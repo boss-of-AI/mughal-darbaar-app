@@ -34,7 +34,7 @@ export async function PATCH(
   { params }: { params: Promise<{ orderId: string }> }
 ) {
   const session = await auth();
-  if (!session?.user || !["owner", "staff", "rider"].includes(session.user.role)) {
+  if (!session?.user || !["owner", "staff", "chef", "rider"].includes(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -47,6 +47,15 @@ export async function PATCH(
   }
 
   const { status, paymentStatus, riderId } = parsed.data;
+  if (
+    session.user.role === "chef" &&
+    (paymentStatus !== undefined || riderId !== undefined)
+  ) {
+    return NextResponse.json(
+      { error: "Chef role can only update kitchen order preparation status" },
+      { status: 403 }
+    );
+  }
   const now = new Date();
 
   const [existing] = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);

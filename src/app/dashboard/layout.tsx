@@ -11,7 +11,7 @@ export default async function DashboardLayout({
   const session = await auth();
 
   if (!session?.user) redirect("/auth/login");
-  if (!["owner", "staff", "rider"].includes(session.user.role)) redirect("/");
+  if (!["owner", "staff", "chef", "rider"].includes(session.user.role)) redirect("/");
 
   return (
     <div className={styles.dashWrap}>

@@ -11,7 +11,7 @@ const createStaffSchema = z.object({
   email: z.string().trim().email().max(120),
   phone: z.string().trim().max(25).optional(),
   password: z.string().min(8).max(72),
-  role: z.enum(["staff", "owner", "rider"]).default("staff"),
+  role: z.enum(["staff", "chef", "rider", "owner"]).default("staff"),
 });
 
 export async function POST(req: NextRequest) {
@@ -35,6 +35,12 @@ export async function POST(req: NextRequest) {
   const { name, email, phone, password, role } = parsed.data;
   if (session.user.role !== "owner" && role === "owner") {
     return NextResponse.json({ error: "Only owners can create another owner account" }, { status: 403 });
+  }
+  if (role === "rider" && (!phone || phone.replace(/\D/g, "").length < 10)) {
+    return NextResponse.json(
+      { error: "A valid 10-digit mobile number is required for Delivery Riders" },
+      { status: 400 }
+    );
   }
   const normalizedEmail = email.toLowerCase();
 

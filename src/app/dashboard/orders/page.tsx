@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { orders, orderItems, restaurantTables, tableSessions, users } from "@/lib/db/schema";
 import { desc, eq, inArray } from "drizzle-orm";
@@ -11,6 +12,8 @@ export const metadata: Metadata = { title: `Orders — ${restaurantConfig.name}`
 export const dynamic = "force-dynamic"; // Always fetch fresh
 
 export default async function OrdersPage() {
+  const session = await auth();
+  const userRole = session?.user?.role ?? "staff";
   let initial: Order[] = [];
   let riders: RiderOption[] = [];
 
@@ -179,5 +182,5 @@ export default async function OrdersPage() {
     // DB not connected
   }
 
-  return <OrdersClient initial={initial} riders={riders} />;
+  return <OrdersClient initial={initial} riders={riders} userRole={userRole} />;
 }
