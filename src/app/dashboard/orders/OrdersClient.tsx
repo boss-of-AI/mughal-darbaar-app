@@ -18,6 +18,7 @@ import {
   Receipt,
 } from "lucide-react";
 import type { DashboardOrderPayload } from "@/lib/sse";
+import type { StoreAvailabilityResult } from "@/lib/store-hours";
 import styles from "./orders.module.css";
 
 // ── Types ─────────────────────────────────────────────────────
@@ -127,6 +128,18 @@ function getPaymentBadge(order: Order): {
 } {
   const amt = paise2rupee(order.totalPaise);
   const sessionAmt = paise2rupee(order.sessionTotalPaise || order.totalPaise);
+
+  if (order.paymentStatus === "refunded" || order.refundStatus === "processed") {
+    return {
+      label: "REFUNDED TO CUSTOMER",
+      sublabel: order.refundToken
+        ? `Token Verified (${order.refundToken})`
+        : `Refunded ${amt}`,
+      color: "#047857",
+      bg: "#D1FAE5",
+      isPaid: true,
+    };
+  }
 
   if (order.paymentStatus === "paid") {
     if (order.paymentMethod === "razorpay") {
@@ -304,6 +317,7 @@ const onlineTabs: { key: OrderStatus | "all"; label: string }[] = [
   { key: "confirmed", label: "Order Placed" },
   { key: "out_for_delivery", label: "Out for Delivery" },
   { key: "delivered", label: "Delivered" },
+  { key: "rejected", label: "Rejected & Refunds" },
 ];
 
 const dineInTabs: { key: OrderStatus | "all"; label: string }[] = [
@@ -319,13 +333,28 @@ export default function OrdersClient({
   initial,
   riders = [],
   userRole = "staff",
+  initialStoreStatus,
 }: {
   initial: Order[];
   riders?: RiderOption[];
   userRole?: string;
+  initialStoreStatus?: StoreAvailabilityResult;
 }) {
   const [orders, setOrders] = useState<Order[]>(initial);
   const [selectedRiders, setSelectedRiders] = useState<Record<string, string>>({});
+  const [storeStatus, setStoreStatus] = useState<StoreAvailabilityResult | undefined>(
+    initialStoreStatus
+  );
+  const [openTimeInput, setOpenTimeInput] = useState(
+    initialStoreStatus?.todayOpen || "12:00"
+  );
+  const [closeTimeInput, setCloseTimeInput] = useState(
+    initialStoreStatus?.todayClose || "23:30"
+  );
+  const [savingTimings, setSavingTimings] = useState(false);
+  const [timingsMsg, setTimingsMsg] = useState<string | null>(null);
+  const [refundTokenInputs, setRefundTokenInputs] = useState<Record<string, string>>({});
+  const [refundErrors, setRefundErrors] = useState<Record<string, string>>({});
   const [section, setSection] = useState<SectionMode>(() => {
     const hasPendingDineIn = initial.some(
       (o) => o.orderType === "dine_in" && (o.status === "pending" || o.status === "out_for_delivery")
@@ -536,9 +565,90 @@ export default function OrdersClient({
     }
   };
 
+  // ── Admin & Staff Order Accepting Timings Handlers ─────────
+  const handleToggleStoreLive = async (nextLive: boolean) => {
+    setSavingTimings(true);
+    setTimingsMsg(null);
+    try {
+      const res = await fetch("/api/dashboard/timings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isAcceptingOrders: nextLive }),
+      });
+      if (res.ok) {
+        const updated: StoreAvailabilityResult = await res.json();
+        setStoreStatus(updated);
+        setTimingsMsg(
+          nextLive
+            ? "✓ Store is now LIVE (within Order Accepting Timings)"
+            : "✓ Store set to CLOSED / Not Accepting Orders"
+        );
+        setTimeout(() => setTimingsMsg(null), 3500);
+      }
+    } finally {
+      setSavingTimings(false);
+    }
+  };
+
+  const handleSaveTimings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingTimings(true);
+    setTimingsMsg(null);
+    try {
+      const res = await fetch("/api/dashboard/timings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          openTime: openTimeInput,
+          closeTime: closeTimeInput,
+          closedToday: false,
+          applyScope: "all_days",
+        }),
+      });
+      if (res.ok) {
+        const updated: StoreAvailabilityResult = await res.json();
+        setStoreStatus(updated);
+        setTimingsMsg(`✓ Order Timings updated to ${updated.todayFormattedWindow}`);
+        setTimeout(() => setTimingsMsg(null), 4000);
+      }
+    } finally {
+      setSavingTimings(false);
+    }
+  };
+
+  // ── Owner Refund Verification Handler ──────────────────────
+  const handleVerifyAndRefund = async (orderId: string, tokenToVerify: string) => {
+    setUpdating(orderId);
+    setRefundErrors((prev) => ({ ...prev, [orderId]: "" }));
+    try {
+      const res = await fetch(`/api/dashboard/orders/${orderId}/refund`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: tokenToVerify }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setRefundErrors((prev) => ({
+          ...prev,
+          [orderId]: data.error ?? "Refund token verification failed",
+        }));
+        return;
+      }
+      setOrders((prev) => prev.map((o) => (o.id === data.id ? data : o)));
+    } finally {
+      setUpdating(null);
+    }
+  };
+
   // ── Partition orders into 2 sections: Online vs Dine-In ────
   const onlineOrders = orders.filter((o) => o.orderType !== "dine_in");
   const dineInOrders = orders.filter((o) => o.orderType === "dine_in");
+  const pendingRefundCount = orders.filter(
+    (o) =>
+      (o.status === "rejected" || o.status === "cancelled") &&
+      o.refundStatus === "requested" &&
+      o.paymentStatus !== "refunded"
+  ).length;
 
   const onlineActionCount = onlineOrders.filter((o) => o.status === "pending").length;
   const dineInActionCount = dineInOrders.filter(
@@ -555,6 +665,9 @@ export default function OrdersClient({
           if (section === "online" && filter === "confirmed") {
             return o.status === "confirmed" || o.status === "preparing" || o.status === "ready";
           }
+          if (filter === "rejected") {
+            return o.status === "rejected" || o.status === "cancelled";
+          }
           return o.status === filter;
         });
 
@@ -562,6 +675,8 @@ export default function OrdersClient({
     const key =
       section === "online" && (o.status === "preparing" || o.status === "ready")
         ? "confirmed"
+        : o.status === "cancelled"
+        ? "rejected"
         : o.status;
     acc[key] = (acc[key] ?? 0) + 1;
     return acc;
@@ -619,8 +734,182 @@ export default function OrdersClient({
           >
             <Bell size={15} /> Enable Alerts
           </button>
+          {userRole === "owner" && pendingRefundCount > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setSection("online");
+                setFilter("rejected");
+              }}
+              style={{
+                padding: "0.4rem 0.85rem",
+                borderRadius: 999,
+                border: "1.5px solid #F59E0B",
+                background: "#FFFBEB",
+                color: "#B45309",
+                fontWeight: 800,
+                fontSize: "0.76rem",
+                cursor: "pointer",
+              }}
+            >
+              🔐 {pendingRefundCount} Refund Token{pendingRefundCount > 1 ? "s" : ""} to Verify
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Admin & Staff Order Accepting Timings & Store Live/Closed Control Bar */}
+      {userRole !== "chef" && storeStatus && (
+        <div
+          style={{
+            padding: "0.9rem 1.15rem",
+            borderRadius: 14,
+            background: storeStatus.isOpenNow ? "#ECFDF5" : "#FEF2F2",
+            border: storeStatus.isOpenNow
+              ? "1.5px solid #10B981"
+              : "1.5px solid #EF4444",
+            marginBottom: "1.25rem",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "0.85rem",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", flexWrap: "wrap" }}>
+            <span
+              style={{
+                padding: "0.28rem 0.7rem",
+                borderRadius: 999,
+                background: storeStatus.isOpenNow ? "#059669" : "#DC2626",
+                color: "#FFFFFF",
+                fontWeight: 900,
+                fontSize: "0.74rem",
+                letterSpacing: "0.03em",
+              }}
+            >
+              {storeStatus.isOpenNow ? "🟢 LIVE · ACCEPTING ORDERS" : "🔴 CLOSED · NOT LIVE"}
+            </span>
+            <div style={{ fontSize: "0.82rem", color: "#1F2937" }}>
+              <strong>Order Accepting Timings ({storeStatus.todayLabel}):</strong>{" "}
+              <span style={{ fontWeight: 800 }}>{storeStatus.todayFormattedWindow}</span>
+              <span style={{ marginLeft: 8, color: "#6B7280", fontSize: "0.75rem" }}>
+                (IST Now: {storeStatus.currentIstTimeFormatted})
+              </span>
+            </div>
+            {timingsMsg && (
+              <span
+                style={{
+                  fontSize: "0.76rem",
+                  fontWeight: 800,
+                  color: "#047857",
+                  background: "#D1FAE5",
+                  padding: "0.2rem 0.55rem",
+                  borderRadius: 6,
+                }}
+              >
+                {timingsMsg}
+              </span>
+            )}
+          </div>
+
+          <form
+            onSubmit={handleSaveTimings}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              flexWrap: "wrap",
+            }}
+          >
+            <label
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.3rem",
+                fontSize: "0.76rem",
+                fontWeight: 700,
+                color: "#374151",
+              }}
+            >
+              Open:
+              <input
+                type="time"
+                value={openTimeInput}
+                onChange={(e) => setOpenTimeInput(e.target.value)}
+                style={{
+                  padding: "0.28rem 0.45rem",
+                  borderRadius: 6,
+                  border: "1px solid #D1D5DB",
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  background: "#FFFFFF",
+                }}
+              />
+            </label>
+            <label
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.3rem",
+                fontSize: "0.76rem",
+                fontWeight: 700,
+                color: "#374151",
+              }}
+            >
+              Close:
+              <input
+                type="time"
+                value={closeTimeInput}
+                onChange={(e) => setCloseTimeInput(e.target.value)}
+                style={{
+                  padding: "0.28rem 0.45rem",
+                  borderRadius: 6,
+                  border: "1px solid #D1D5DB",
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  background: "#FFFFFF",
+                }}
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={savingTimings}
+              style={{
+                padding: "0.36rem 0.7rem",
+                borderRadius: 8,
+                border: "1px solid #D97706",
+                background: "#FFFBEB",
+                color: "#92400E",
+                fontSize: "0.75rem",
+                fontWeight: 800,
+                cursor: "pointer",
+              }}
+            >
+              ⏰ Save Timings
+            </button>
+            <button
+              type="button"
+              disabled={savingTimings}
+              onClick={() => handleToggleStoreLive(!storeStatus.isAcceptingOrdersSwitch)}
+              style={{
+                padding: "0.36rem 0.75rem",
+                borderRadius: 8,
+                border: "none",
+                background: storeStatus.isAcceptingOrdersSwitch ? "#DC2626" : "#059669",
+                color: "#FFFFFF",
+                fontSize: "0.75rem",
+                fontWeight: 800,
+                cursor: "pointer",
+              }}
+            >
+              {storeStatus.isAcceptingOrdersSwitch
+                ? "🔴 Pause / Close Store Now"
+                : "🟢 Set Store Live Now"}
+            </button>
+          </form>
+        </div>
+      )}
 
       {/* 2 Distinct Sections Switcher: Online Delivery vs Dine-In Table Orders */}
       <div className={styles.sectionSwitcher} role="region" aria-label="Order Sections">
@@ -1095,6 +1384,131 @@ export default function OrdersClient({
                     >
                       {order.status === "pending" ? "Reject Order" : "Cancel Order"}
                     </button>
+                  )}
+
+                {/* Owner-to-Customer Refund Token Verification Portal (for Rejected/Cancelled Online-Paid Orders) */}
+                {(order.status === "rejected" || order.status === "cancelled") &&
+                  (order.paymentMethod === "razorpay" ||
+                    order.paymentStatus === "paid" ||
+                    order.paymentStatus === "refunded") && (
+                    <div
+                      style={{
+                        padding: "0.85rem 1rem",
+                        background:
+                          order.paymentStatus === "refunded" ||
+                          order.refundStatus === "processed"
+                            ? "#ECFDF5"
+                            : "#FFFBEB",
+                        borderTop: "1.5px solid #F59E0B",
+                        fontSize: "0.78rem",
+                      }}
+                    >
+                      {order.paymentStatus === "refunded" ||
+                      order.refundStatus === "processed" ? (
+                        <div style={{ color: "#065F46", fontWeight: 800 }}>
+                          ✅ Online Payment Refunded ({paise2rupee(order.totalPaise)})
+                          {order.refundToken ? ` · Verified Token: ${order.refundToken}` : ""}
+                        </div>
+                      ) : userRole === "owner" ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem" }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              gap: "0.4rem",
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            <strong style={{ color: "#92400E" }}>
+                              🔐 Owner Refund Verification ({paise2rupee(order.totalPaise)})
+                            </strong>
+                            {order.refundToken ? (
+                              <span
+                                style={{
+                                  padding: "0.15rem 0.5rem",
+                                  borderRadius: 6,
+                                  background: "#FEF3C7",
+                                  border: "1px solid #D97706",
+                                  color: "#B45309",
+                                  fontWeight: 800,
+                                  fontFamily: "monospace",
+                                }}
+                              >
+                                Customer Token: {order.refundToken}
+                              </span>
+                            ) : (
+                              <span style={{ color: "#B45309", fontSize: "0.72rem" }}>
+                                Waiting for customer to generate Refund Token…
+                              </span>
+                            )}
+                          </div>
+                          {order.refundNote && (
+                            <div style={{ color: "#78350F", fontSize: "0.74rem" }}>
+                              💬 Customer Note: {order.refundNote}
+                            </div>
+                          )}
+                          {order.refundToken && (
+                            <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+                              <input
+                                type="text"
+                                placeholder="Enter token (e.g. RFD-XXXX-XXXX)"
+                                value={refundTokenInputs[order.id] ?? ""}
+                                onChange={(e) =>
+                                  setRefundTokenInputs((prev) => ({
+                                    ...prev,
+                                    [order.id]: e.target.value,
+                                  }))
+                                }
+                                style={{
+                                  flex: 1,
+                                  padding: "0.38rem 0.55rem",
+                                  borderRadius: 7,
+                                  border: "1px solid #D97706",
+                                  fontSize: "0.76rem",
+                                  fontFamily: "monospace",
+                                  fontWeight: 700,
+                                  background: "#FFFFFF",
+                                }}
+                              />
+                              <button
+                                type="button"
+                                disabled={isUpdating}
+                                onClick={() =>
+                                  handleVerifyAndRefund(
+                                    order.id,
+                                    refundTokenInputs[order.id] ?? ""
+                                  )
+                                }
+                                style={{
+                                  padding: "0.4rem 0.7rem",
+                                  borderRadius: 7,
+                                  border: "none",
+                                  background: "#059669",
+                                  color: "#FFFFFF",
+                                  fontWeight: 800,
+                                  fontSize: "0.74rem",
+                                  cursor: "pointer",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                💸 Verify &amp; Refund
+                              </button>
+                            </div>
+                          )}
+                          {refundErrors[order.id] && (
+                            <div style={{ color: "#DC2626", fontWeight: 700, fontSize: "0.73rem" }}>
+                              {refundErrors[order.id]}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div style={{ color: "#92400E", fontWeight: 700 }}>
+                          🔒 Online Paid Order Rejected — Only the Restaurant Owner (Admin) can
+                          verify the customer&apos;s Refund Token and process this refund.
+                        </div>
+                      )}
+                    </div>
                   )}
               </div>
             );

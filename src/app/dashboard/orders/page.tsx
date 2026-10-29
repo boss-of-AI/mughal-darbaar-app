@@ -1,12 +1,20 @@
 import bcrypt from "bcryptjs";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { orders, orderItems, restaurantTables, tableSessions, users } from "@/lib/db/schema";
+import {
+  orders,
+  orderItems,
+  restaurantSettings,
+  restaurantTables,
+  tableSessions,
+  users,
+} from "@/lib/db/schema";
 import { desc, eq, inArray } from "drizzle-orm";
 import type { Metadata } from "next";
 import OrdersClient from "./OrdersClient";
 import type { Order, RiderOption } from "./OrdersClient";
 import { restaurantConfig } from "@/config/restaurant.config";
+import { evaluateStoreStatus } from "@/lib/store-hours";
 
 export const metadata: Metadata = { title: `Orders — ${restaurantConfig.name}` };
 export const dynamic = "force-dynamic"; // Always fetch fresh
@@ -16,8 +24,16 @@ export default async function OrdersPage() {
   const userRole = session?.user?.role ?? "staff";
   let initial: Order[] = [];
   let riders: RiderOption[] = [];
+  let storeStatus = evaluateStoreStatus();
 
   try {
+    const [settingsRow] = await db.select().from(restaurantSettings).limit(1);
+    if (settingsRow) {
+      storeStatus = evaluateStoreStatus({
+        isAcceptingOrders: settingsRow.isAcceptingOrders,
+        openingHours: settingsRow.openingHours,
+      });
+    }
     let riderRows = await db
       .select({
         id: users.id,
@@ -170,11 +186,23 @@ export default async function OrdersPage() {
         riderName: o.riderName ?? null,
         riderPhone: o.riderPhone ?? null,
         riderReachedAt: o.riderReachedAt ? o.riderReachedAt.toISOString() : null,
+        refundToken: o.refundToken ?? null,
+        refundStatus: o.refundStatus ?? "none",
+        refundRequestedAt: o.refundRequestedAt ? o.refundRequestedAt.toISOString() : null,
+        refundProcessedAt: o.refundProcessedAt ? o.refundProcessedAt.toISOString() : null,
+        refundNote: o.refundNote ?? null,
       };
     });
   } catch {
     // DB not connected
   }
 
-  return <OrdersClient initial={initial} riders={riders} userRole={userRole} />;
+  return (
+    <OrdersClient
+      initial={initial}
+      riders={riders}
+      userRole={userRole}
+      initialStoreStatus={storeStatus}
+    />
+  );
 }

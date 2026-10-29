@@ -67,6 +67,9 @@ export async function GET(req: NextRequest) {
       riderName: o.riderName ?? null,
       riderPhone: o.riderPhone ?? null,
       riderReachedAt: o.riderReachedAt ? o.riderReachedAt.toISOString() : null,
+      refundToken: o.refundToken ?? null,
+      refundStatus: o.refundStatus ?? "none",
+      refundProcessedAt: o.refundProcessedAt ? o.refundProcessedAt.toISOString() : null,
       deliveryAddress: o.deliveryAddress ?? null,
       items: allItems
         .filter((i) => i.orderId === o.id)

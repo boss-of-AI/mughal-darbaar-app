@@ -42,6 +42,9 @@ interface HistoryOrder {
   riderName: string | null;
   riderPhone: string | null;
   riderReachedAt: string | null;
+  refundToken?: string | null;
+  refundStatus?: string | null;
+  refundProcessedAt?: string | null;
   items: HistoryItem[];
 }
 
@@ -638,6 +641,111 @@ export default function ProfileClient() {
                         </div>
                       ))}
                     </div>
+
+                    {/* Refund Token Status / Generator for Rejected Online-Paid Orders */}
+                    {(order.status === "rejected" || order.status === "cancelled") &&
+                      (order.paymentMethod === "razorpay" ||
+                        order.paymentStatus === "paid" ||
+                        order.paymentStatus === "refunded") && (
+                        <div
+                          style={{
+                            margin: "0.6rem 0",
+                            padding: "0.65rem 0.85rem",
+                            borderRadius: 10,
+                            background:
+                              order.paymentStatus === "refunded" ||
+                              order.refundStatus === "processed"
+                                ? "#ECFDF5"
+                                : "#FFFBEB",
+                            border:
+                              order.paymentStatus === "refunded" ||
+                              order.refundStatus === "processed"
+                                ? "1.5px solid #10B981"
+                                : "1.5px solid #F59E0B",
+                            fontSize: "0.8rem",
+                          }}
+                        >
+                          {order.paymentStatus === "refunded" ||
+                          order.refundStatus === "processed" ? (
+                            <div style={{ color: "#065F46", fontWeight: 700 }}>
+                              ✅ Online Payment Refund Processed ({rupees(order.totalPaise)})
+                              {order.refundToken ? ` · Token: ${order.refundToken}` : ""}
+                            </div>
+                          ) : order.refundToken ? (
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                flexWrap: "wrap",
+                                gap: "0.5rem",
+                                color: "#92400E",
+                              }}
+                            >
+                              <span>
+                                🔐 <strong>Refund Token:</strong>{" "}
+                                <code
+                                  style={{
+                                    fontSize: "0.95rem",
+                                    fontWeight: 900,
+                                    color: "#B45309",
+                                  }}
+                                >
+                                  {order.refundToken}
+                                </code>{" "}
+                                (Awaiting Owner Verification)
+                              </span>
+                              <Link
+                                href={`/order/${order.id}`}
+                                style={{
+                                  fontSize: "0.75rem",
+                                  fontWeight: 800,
+                                  color: "#B45309",
+                                }}
+                              >
+                                View Refund Portal →
+                              </Link>
+                            </div>
+                          ) : (
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                flexWrap: "wrap",
+                                gap: "0.5rem",
+                                color: "#92400E",
+                              }}
+                            >
+                              <span>
+                                💳 Online-paid order rejected — eligible for{" "}
+                                <strong>{rupees(order.totalPaise)}</strong> refund
+                              </span>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  await fetch(`/api/orders/${order.id}/refund-request`, {
+                                    method: "POST",
+                                  });
+                                  fetchOrders(profile.phone);
+                                }}
+                                style={{
+                                  padding: "0.35rem 0.7rem",
+                                  borderRadius: 8,
+                                  border: "none",
+                                  background: "#D97706",
+                                  color: "#FFFFFF",
+                                  fontWeight: 800,
+                                  fontSize: "0.76rem",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                🔐 Generate Refund Token
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                     <div
                       style={{

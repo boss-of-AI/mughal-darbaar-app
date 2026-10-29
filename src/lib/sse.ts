@@ -56,6 +56,11 @@ export interface DashboardOrderPayload {
   riderName: string | null;
   riderPhone: string | null;
   riderReachedAt: string | null;
+  refundToken?: string | null;
+  refundStatus?: string | null;
+  refundRequestedAt?: string | null;
+  refundProcessedAt?: string | null;
+  refundNote?: string | null;
 }
 
 export async function buildDashboardOrderPayload(
@@ -147,6 +152,11 @@ export async function buildDashboardOrderPayload(
     riderName: order.riderName ?? null,
     riderPhone: order.riderPhone ?? null,
     riderReachedAt: order.riderReachedAt ? order.riderReachedAt.toISOString() : null,
+    refundToken: order.refundToken ?? null,
+    refundStatus: order.refundStatus ?? "none",
+    refundRequestedAt: order.refundRequestedAt ? order.refundRequestedAt.toISOString() : null,
+    refundProcessedAt: order.refundProcessedAt ? order.refundProcessedAt.toISOString() : null,
+    refundNote: order.refundNote ?? null,
   };
 }
 

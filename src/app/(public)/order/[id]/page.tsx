@@ -5,6 +5,7 @@ import { orderItems, orders, restaurantTables, tableSessions } from "@/lib/db/sc
 import AutoRefresh from "./AutoRefresh";
 import AcceptDeliveryButton from "./AcceptDeliveryButton";
 import GenerateBillButton from "./GenerateBillButton";
+import CustomerRefundBox from "./CustomerRefundBox";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Order status", robots: { index: false } };
@@ -266,9 +267,15 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
       ["confirmed", "preparing", "ready", "out_for_delivery"].includes(so.status)
     );
 
+  const isRefundEligible =
+    (order.status === "rejected" || order.status === "cancelled") &&
+    (order.paymentMethod === "razorpay" ||
+      order.paymentStatus === "paid" ||
+      order.paymentStatus === "refunded");
+
   return (
     <main style={{ maxWidth: 640, margin: "0 auto", padding: "6rem 1rem 4rem" }}>
-      {!done && <AutoRefresh />}
+      {(!done || (isRefundEligible && order.refundStatus !== "processed")) && <AutoRefresh />}
 
       <div
         style={{
@@ -321,6 +328,25 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
       >
         {bannerText}
       </div>
+
+      {/* Customer Refund Token Portal (for rejected/cancelled online paid orders) */}
+      {isRefundEligible && (
+        <CustomerRefundBox
+          orderId={order.id}
+          orderNumber={order.orderNumber}
+          totalPaise={order.totalPaise}
+          initialToken={order.refundToken ?? null}
+          initialStatus={
+            order.paymentStatus === "refunded"
+              ? "processed"
+              : order.refundStatus ?? "none"
+          }
+          initialNote={order.refundNote ?? null}
+          processedAt={
+            order.refundProcessedAt ? order.refundProcessedAt.toISOString() : null
+          }
+        />
+      )}
 
       {/* Order Progress Stepper */}
       {stageIdx >= 0 && (

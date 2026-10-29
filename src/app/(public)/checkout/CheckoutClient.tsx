@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart";
 import { ACTIVE_COUPON_KEY, type PublicOffer } from "@/components/public/OffersPopup";
+import type { StoreAvailabilityResult } from "@/lib/store-hours";
 import styles from "./checkout.module.css";
 
 interface Cfg {
@@ -128,6 +129,7 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [offers, setOffers] = useState<PublicOffer[]>([]);
+  const [storeStatus, setStoreStatus] = useState<StoreAvailabilityResult | null>(null);
   const [couponCode, setCouponCode] = useState<string>(() => {
     if (typeof window !== "undefined") {
       try {
@@ -151,6 +153,13 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
       .then((r) => r.json())
       .then((d) => {
         if (Array.isArray(d.tables)) setTables(d.tables);
+      })
+      .catch(() => {});
+
+    fetch("/api/store-status", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d: StoreAvailabilityResult) => {
+        if (d && typeof d.isOpenNow === "boolean") setStoreStatus(d);
       })
       .catch(() => {});
 
@@ -641,10 +650,39 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
               Minimum order for Delivery is {rupees(cfg.minimumOrderPaise)}. Add more items or switch to <strong>Pickup</strong> above.
             </p>
           )}
+          {storeStatus && !storeStatus.isOpenNow && (
+            <div
+              role="alert"
+              style={{
+                padding: "0.9rem 1rem",
+                borderRadius: 12,
+                background: "#FEF2F2",
+                border: "1.5px solid #EF4444",
+                color: "#991B1B",
+                marginBottom: "0.75rem",
+                fontSize: "0.84rem",
+              }}
+            >
+              <strong style={{ display: "block", marginBottom: "0.25rem", fontSize: "0.9rem" }}>
+                🔴 {storeStatus.headline}
+              </strong>
+              <div>{storeStatus.subline}</div>
+              <div style={{ marginTop: "0.3rem", fontWeight: 800 }}>
+                ⏰ Order Accepting Timings ({storeStatus.todayLabel}):{" "}
+                {storeStatus.todayFormattedWindow}
+              </div>
+            </div>
+          )}
           {error && <p className={styles.err} role="alert">{error}</p>}
-          <button type="submit" className="btn btn--primary btn--full btn--lg" disabled={busy || belowMin}>
+          <button
+            type="submit"
+            className="btn btn--primary btn--full btn--lg"
+            disabled={busy || belowMin || Boolean(storeStatus && !storeStatus.isOpenNow)}
+          >
             {busy
               ? "Processing…"
+              : storeStatus && !storeStatus.isOpenNow
+              ? `🔴 Restaurant Closed · Opens ${storeStatus.todayFormattedWindow}`
               : effectivePaymentMethod === "razorpay"
               ? `Pay Online · ${rupees(total)}`
               : `Place Order · ${rupees(total)}`}

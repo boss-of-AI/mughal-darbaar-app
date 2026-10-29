@@ -18,6 +18,7 @@ import {
   tableSessions,
 } from "@/lib/db/schema";
 import { buildDashboardOrderPayload, pushOrderEvent } from "@/lib/sse";
+import { evaluateStoreStatus } from "@/lib/store-hours";
 
 /**
  * POST /api/orders — public order placement.
@@ -134,6 +135,21 @@ export async function POST(req: NextRequest) {
   }
   if (!settings) {
     return NextResponse.json({ error: "Restaurant not configured" }, { status: 503 });
+  }
+
+  const storeAvailability = evaluateStoreStatus({
+    isAcceptingOrders: settings.isAcceptingOrders,
+    openingHours: settings.openingHours,
+  });
+  if (!storeAvailability.isOpenNow) {
+    return NextResponse.json(
+      {
+        error: `${storeAvailability.headline}. ${storeAvailability.subline}`,
+        storeClosed: true,
+        storeStatus: storeAvailability,
+      },
+      { status: 403 }
+    );
   }
 
   const modeEnabled =

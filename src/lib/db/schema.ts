@@ -84,6 +84,7 @@ export const restaurantSettings = pgTable("restaurant_settings", {
 
   // Hours (stored as JSON: { day: { open: "HH:MM", close: "HH:MM", closed: boolean } })
   openingHours: jsonb("opening_hours"),
+  isAcceptingOrders: boolean("is_accepting_orders").notNull().default(true),
 
   // Service modes
   deliveryEnabled: boolean("delivery_enabled").notNull().default(true),
@@ -378,6 +379,13 @@ export const orders = pgTable(
     riderName: text("rider_name"),
     riderPhone: text("rider_phone"),
     riderReachedAt: timestamp("rider_reached_at"),
+
+    // Customer-to-Owner Refund Verification System (for rejected/cancelled online paid orders)
+    refundToken: text("refund_token"),
+    refundStatus: text("refund_status").default("none"), // "none" | "requested" | "processed"
+    refundRequestedAt: timestamp("refund_requested_at"),
+    refundProcessedAt: timestamp("refund_processed_at"),
+    refundNote: text("refund_note"),
 
     // Timestamps
     estimatedReadyAt: timestamp("estimated_ready_at"),
