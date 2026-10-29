@@ -230,10 +230,25 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
       bannerBorder = "#3B82F6";
       bannerColor = "#1E40AF";
     } else if (stageIdx === 2) {
-      bannerText = "Out for Delivery! 🛵 Your order is on the way to your location.";
-      bannerBg = "#ECFEFF";
-      bannerBorder = "#06B6D4";
-      bannerColor = "#0E7490";
+      if (order.riderReachedAt) {
+        bannerText = `📍 Your Rider (${order.riderName || "Delivery Partner"}) has REACHED your location! ${
+          isCod && order.paymentStatus !== "paid"
+            ? `Please keep ${rupees(order.totalPaise)} in cash ready to hand over.`
+            : "Please collect your order at the door."
+        }`;
+        bannerBg = "#ECFDF5";
+        bannerBorder = "#10B981";
+        bannerColor = "#065F46";
+      } else {
+        bannerText = `Out for Delivery! 🛵 ${
+          order.riderName
+            ? `Rider ${order.riderName} is on the way to your location.`
+            : "Your order is on the way to your location."
+        }`;
+        bannerBg = "#ECFEFF";
+        bannerBorder = "#06B6D4";
+        bannerColor = "#0E7490";
+      }
     } else if (stageIdx === 3) {
       bannerText = "Delivered! ✅ Thank you for ordering with us. Enjoy your meal!";
       bannerBg = "#ECFDF5";
@@ -357,6 +372,70 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Assigned Rider Card (for Delivery Orders) */}
+      {!isDineIn && order.riderName && (
+        <div
+          style={{
+            padding: "1rem 1.25rem",
+            borderRadius: 12,
+            background: order.riderReachedAt ? "#ECFDF5" : "#EFF6FF",
+            border: order.riderReachedAt ? "2px solid #10B981" : "1.5px solid #93C5FD",
+            marginBottom: "1.25rem",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "0.75rem",
+          }}
+        >
+          <div>
+            <span
+              style={{
+                display: "block",
+                fontSize: "0.75rem",
+                fontWeight: 800,
+                textTransform: "uppercase",
+                color: order.riderReachedAt ? "#047857" : "#1D4ED8",
+              }}
+            >
+              {order.riderReachedAt
+                ? "📍 Rider Has Reached Your Doorstep!"
+                : "🛵 Your Allotted Delivery Rider"}
+            </span>
+            <strong style={{ fontSize: "1.02rem" }}>{order.riderName}</strong>
+            {isCod && order.paymentStatus !== "paid" && (
+              <span
+                style={{
+                  display: "block",
+                  fontSize: "0.82rem",
+                  color: "#B45309",
+                  fontWeight: 700,
+                  marginTop: 2,
+                }}
+              >
+                💵 Cash on Delivery to pay Rider: {rupees(order.totalPaise)}
+              </span>
+            )}
+          </div>
+          {order.riderPhone && (
+            <a
+              href={`tel:${order.riderPhone}`}
+              style={{
+                padding: "0.5rem 0.95rem",
+                borderRadius: 10,
+                background: "#2563EB",
+                color: "#fff",
+                fontWeight: 800,
+                fontSize: "0.84rem",
+                textDecoration: "none",
+              }}
+            >
+              📞 Call Rider ({order.riderPhone})
+            </a>
+          )}
         </div>
       )}
 

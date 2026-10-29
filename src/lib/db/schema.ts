@@ -20,7 +20,7 @@ import { relations } from "drizzle-orm";
 
 // ── Enums ────────────────────────────────────────────────────
 
-export const userRoleEnum = pgEnum("user_role", ["owner", "staff", "customer"]);
+export const userRoleEnum = pgEnum("user_role", ["owner", "staff", "customer", "rider"]);
 export const serviceModeEnum = pgEnum("service_mode", [
   "delivery",
   "pickup",
@@ -372,6 +372,12 @@ export const orders = pgTable(
 
     // Special instructions
     specialInstructions: text("special_instructions"),
+
+    // Rider allotment & live tracking (delivery mode)
+    riderId: uuid("rider_id").references(() => users.id),
+    riderName: text("rider_name"),
+    riderPhone: text("rider_phone"),
+    riderReachedAt: timestamp("rider_reached_at"),
 
     // Timestamps
     estimatedReadyAt: timestamp("estimated_ready_at"),

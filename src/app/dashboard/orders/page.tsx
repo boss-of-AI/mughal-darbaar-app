@@ -1,9 +1,10 @@
+import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
-import { orders, orderItems, restaurantTables, tableSessions } from "@/lib/db/schema";
-import { desc, inArray } from "drizzle-orm";
+import { orders, orderItems, restaurantTables, tableSessions, users } from "@/lib/db/schema";
+import { desc, eq, inArray } from "drizzle-orm";
 import type { Metadata } from "next";
 import OrdersClient from "./OrdersClient";
-import type { Order } from "./OrdersClient";
+import type { Order, RiderOption } from "./OrdersClient";
 import { restaurantConfig } from "@/config/restaurant.config";
 
 export const metadata: Metadata = { title: `Orders — ${restaurantConfig.name}` };
@@ -11,8 +12,47 @@ export const dynamic = "force-dynamic"; // Always fetch fresh
 
 export default async function OrdersPage() {
   let initial: Order[] = [];
+  let riders: RiderOption[] = [];
 
   try {
+    let riderRows = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        phone: users.phone,
+      })
+      .from(users)
+      .where(eq(users.role, "rider"));
+
+    if (riderRows.length === 0) {
+      const passwordHash = await bcrypt.hash("Rider@1234", 12);
+      const [createdRider] = await db
+        .insert(users)
+        .values({
+          name: "Imran Khan (Rider)",
+          email: "rider@mughaldarbaar.in",
+          phone: "9876543211",
+          passwordHash,
+          role: "rider",
+          isActive: true,
+        })
+        .onConflictDoNothing()
+        .returning({
+          id: users.id,
+          name: users.name,
+          phone: users.phone,
+        });
+      if (createdRider) {
+        riderRows = [createdRider];
+      }
+    }
+
+    riders = riderRows.map((r) => ({
+      id: r.id,
+      name: r.name ?? "Delivery Rider",
+      phone: r.phone ?? null,
+    }));
+
     const orderRows = await db
       .select()
       .from(orders)
@@ -129,11 +169,15 @@ export default async function OrdersPage() {
         items,
         deliveryAddress: (o.deliveryAddress as Order["deliveryAddress"]) ?? null,
         specialInstructions: o.specialInstructions ?? null,
+        riderId: o.riderId ?? null,
+        riderName: o.riderName ?? null,
+        riderPhone: o.riderPhone ?? null,
+        riderReachedAt: o.riderReachedAt ? o.riderReachedAt.toISOString() : null,
       };
     });
   } catch {
     // DB not connected
   }
 
-  return <OrdersClient initial={initial} />;
+  return <OrdersClient initial={initial} riders={riders} />;
 }

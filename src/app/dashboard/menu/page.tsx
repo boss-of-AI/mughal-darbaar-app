@@ -37,6 +37,7 @@ export default async function DashboardMenuPage() {
       categoryId: i.categoryId,
       name: i.name,
       description: i.description,
+      imageUrl: i.imageUrl,
       pricePaise: i.pricePaise,
       isVegetarian: i.isVegetarian,
       isSpicy: i.isSpicy,

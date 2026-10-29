@@ -1,7 +1,19 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Plus, Search, Star, Archive, Check, X, FolderPlus } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Star,
+  Archive,
+  Check,
+  X,
+  FolderPlus,
+  Image as ImageIcon,
+  Upload,
+  Sparkles,
+} from "lucide-react";
+import { CURATED_DISH_PHOTOS, getSuggestedDishImage } from "@/lib/dish-images";
 import styles from "./menu-manager.module.css";
 
 export interface VariantRow {
@@ -25,6 +37,7 @@ export interface MenuItemRow {
   categoryId: string;
   name: string;
   description: string | null;
+  imageUrl: string | null;
   pricePaise: number;
   isVegetarian: boolean;
   isSpicy: boolean;
@@ -36,6 +49,43 @@ export interface MenuItemRow {
 }
 
 const formatRupees = (paise: number) => `₹${(paise / 100).toLocaleString("en-IN")}`;
+
+/** Resize & compress an uploaded image file to a clean Data URL (max 640px) */
+function compressImageFile(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Could not read file"));
+    reader.onload = () => {
+      const img = new window.Image();
+      img.onerror = () => reject(new Error("Invalid image file"));
+      img.onload = () => {
+        const maxDim = 640;
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(reader.result as string);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", 0.82));
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 export default function MenuManagerClient({
   initialCategories,
@@ -49,18 +99,21 @@ export default function MenuManagerClient({
   const [selectedCat, setSelectedCat] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [autoFilling, setAutoFilling] = useState(false);
 
-  // Modals
+  // Create Category Modal
   const [showCatModal, setShowCatModal] = useState(false);
   const [catName, setCatName] = useState("");
   const [catDesc, setCatDesc] = useState("");
   const [catSaving, setCatSaving] = useState(false);
 
+  // Create Dish Modal
   const [showItemModal, setShowItemModal] = useState(false);
   const [itemForm, setItemForm] = useState({
     categoryId: initialCategories[0]?.id ?? "",
     name: "",
     description: "",
+    imageUrl: "",
     priceRupees: "",
     isVegetarian: false,
     isSpicy: false,
@@ -74,8 +127,25 @@ export default function MenuManagerClient({
   const [itemError, setItemError] = useState<string | null>(null);
   const [itemSaving, setItemSaving] = useState(false);
 
+  // Edit Dish & Photo Modal
+  const [editingItem, setEditingItem] = useState<MenuItemRow | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    description: "",
+    priceRupees: "",
+    imageUrl: "",
+    isVegetarian: false,
+  });
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
   const categoryNameMap = useMemo(
     () => new Map(categories.map((c) => [c.id, c.name])),
+    [categories]
+  );
+
+  const categorySlugMap = useMemo(
+    () => new Map(categories.map((c) => [c.id, c.slug])),
     [categories]
   );
 
@@ -95,7 +165,12 @@ export default function MenuManagerClient({
 
   async function patchItem(
     itemId: string,
-    payload: Partial<Pick<MenuItemRow, "status" | "isFeatured" | "pricePaise" | "name">>
+    payload: Partial<
+      Pick<
+        MenuItemRow,
+        "status" | "isFeatured" | "pricePaise" | "name" | "description" | "imageUrl" | "isVegetarian"
+      >
+    >
   ) {
     setBusyId(itemId);
     try {
@@ -111,9 +186,72 @@ export default function MenuManagerClient({
         } else {
           setItems((prev) => prev.map((i) => (i.id === itemId ? { ...i, ...updated } : i)));
         }
+        return true;
       }
+      return false;
     } finally {
       setBusyId(null);
+    }
+  }
+
+  async function handleAutoFillPhotos() {
+    setAutoFilling(true);
+    try {
+      for (const item of items) {
+        if (!item.imageUrl) {
+          const suggested = getSuggestedDishImage(
+            item.name,
+            categorySlugMap.get(item.categoryId)
+          );
+          await patchItem(item.id, { imageUrl: suggested });
+        }
+      }
+    } finally {
+      setAutoFilling(false);
+    }
+  }
+
+  function openEditModal(item: MenuItemRow) {
+    setEditingItem(item);
+    setEditError(null);
+    setEditForm({
+      name: item.name,
+      description: item.description ?? "",
+      priceRupees: String(Math.round(item.pricePaise / 100)),
+      imageUrl:
+        item.imageUrl ||
+        getSuggestedDishImage(item.name, categorySlugMap.get(item.categoryId)),
+      isVegetarian: item.isVegetarian,
+    });
+  }
+
+  async function handleSaveEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingItem) return;
+    setEditError(null);
+
+    const pricePaise = Math.round(Number(editForm.priceRupees) * 100);
+    if (!Number.isFinite(pricePaise) || pricePaise < 100) {
+      setEditError("Enter a valid price in ₹.");
+      return;
+    }
+
+    setEditSaving(true);
+    try {
+      const ok = await patchItem(editingItem.id, {
+        name: editForm.name.trim(),
+        description: editForm.description.trim() || null,
+        pricePaise,
+        imageUrl: editForm.imageUrl.trim() || null,
+        isVegetarian: editForm.isVegetarian,
+      });
+      if (ok) {
+        setEditingItem(null);
+      } else {
+        setEditError("Failed to update dish.");
+      }
+    } finally {
+      setEditSaving(false);
     }
   }
 
@@ -181,6 +319,12 @@ export default function MenuManagerClient({
           categoryId: itemForm.categoryId,
           name: itemForm.name.trim(),
           description: itemForm.description.trim() || undefined,
+          imageUrl:
+            itemForm.imageUrl.trim() ||
+            getSuggestedDishImage(
+              itemForm.name.trim(),
+              categorySlugMap.get(itemForm.categoryId)
+            ),
           pricePaise: variants[0]?.pricePaise ?? pricePaise,
           isVegetarian: itemForm.isVegetarian,
           isSpicy: itemForm.isSpicy,
@@ -200,6 +344,7 @@ export default function MenuManagerClient({
         ...f,
         name: "",
         description: "",
+        imageUrl: "",
         priceRupees: "",
         halfRupees: "",
         fullRupees: "",
@@ -224,6 +369,18 @@ export default function MenuManagerClient({
           </p>
         </div>
         <div className={styles.headerActions}>
+          {items.some((i) => !i.imageUrl) && (
+            <button
+              type="button"
+              disabled={autoFilling}
+              onClick={handleAutoFillPhotos}
+              className="btn btn--secondary btn--sm"
+              title="Automatically assign nice Mughlai photos to dishes without a custom photo"
+            >
+              <Sparkles size={15} />{" "}
+              {autoFilling ? "Applying Photos…" : "Auto-Fill Dish Photos"}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setShowCatModal(true)}
@@ -303,11 +460,64 @@ export default function MenuManagerClient({
           {filteredItems.map((item) => {
             const isAvailable = item.status === "available";
             const busy = busyId === item.id;
+            const displayImg =
+              item.imageUrl ||
+              getSuggestedDishImage(item.name, categorySlugMap.get(item.categoryId));
+
             return (
               <div
                 key={item.id}
                 className={`${styles.card} ${!isAvailable ? styles.cardUnavailable : ""}`}
               >
+                {/* Dish Image Thumbnail + Edit Photo Overlay */}
+                <div
+                  style={{
+                    position: "relative",
+                    width: "100%",
+                    height: 145,
+                    borderRadius: 10,
+                    overflow: "hidden",
+                    marginBottom: "0.75rem",
+                    background: "var(--color-surface-alt)",
+                    border: "1px solid var(--color-border)",
+                  }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={displayImg}
+                    alt={item.name}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      display: "block",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => openEditModal(item)}
+                    style={{
+                      position: "absolute",
+                      bottom: 8,
+                      right: 8,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 5,
+                      padding: "5px 10px",
+                      borderRadius: 8,
+                      background: "rgba(17, 24, 39, 0.84)",
+                      color: "#fff",
+                      border: "1px solid rgba(255,255,255,0.22)",
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      backdropFilter: "blur(4px)",
+                    }}
+                  >
+                    <ImageIcon size={13} /> Edit Photo / Dish
+                  </button>
+                </div>
+
                 <div className={styles.cardTop}>
                   <div className={styles.cardMeta}>
                     <span
@@ -359,6 +569,17 @@ export default function MenuManagerClient({
                   <button
                     type="button"
                     disabled={busy}
+                    onClick={() => openEditModal(item)}
+                    className={styles.iconBtn}
+                    title="Edit Dish Photo, Name & Price"
+                    aria-label={`Edit ${item.name}`}
+                  >
+                    <ImageIcon size={15} />
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={busy}
                     onClick={() => patchItem(item.id, { isFeatured: !item.isFeatured })}
                     className={styles.iconBtn}
                     title={item.isFeatured ? "Remove from Chef's Picks" : "Mark as Chef's Pick"}
@@ -381,6 +602,245 @@ export default function MenuManagerClient({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Edit Dish & Photo Modal */}
+      {editingItem && (
+        <div
+          className={styles.modalBackdrop}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Edit Dish & Photo"
+        >
+          <form
+            onSubmit={handleSaveEdit}
+            className={styles.modal}
+            style={{ maxWidth: 560, maxHeight: "90vh", overflowY: "auto" }}
+          >
+            <div className={styles.modalHeader}>
+              <h2>Edit Dish &amp; Photo</h2>
+              <button
+                type="button"
+                onClick={() => setEditingItem(null)}
+                className={styles.closeBtn}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Live Image Preview */}
+            <div
+              style={{
+                width: "100%",
+                height: 180,
+                borderRadius: 12,
+                overflow: "hidden",
+                background: "var(--color-surface-alt)",
+                border: "1px solid var(--color-border)",
+                marginBottom: "0.75rem",
+                position: "relative",
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={
+                  editForm.imageUrl ||
+                  getSuggestedDishImage(
+                    editForm.name || editingItem.name,
+                    categorySlugMap.get(editingItem.categoryId)
+                  )
+                }
+                alt={editForm.name}
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
+            </div>
+
+            {/* Upload from Device OR Paste Image URL */}
+            <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
+              <label
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "0.5rem 0.9rem",
+                  borderRadius: 8,
+                  background: "var(--color-primary)",
+                  color: "#fff",
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                <Upload size={14} /> Upload Photo from Device
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    try {
+                      const dataUrl = await compressImageFile(file);
+                      setEditForm((f) => ({ ...f, imageUrl: dataUrl }));
+                    } catch {
+                      setEditError("Could not process image file.");
+                    }
+                  }}
+                />
+              </label>
+
+              <button
+                type="button"
+                className="btn btn--secondary btn--sm"
+                onClick={() =>
+                  setEditForm((f) => ({
+                    ...f,
+                    imageUrl: getSuggestedDishImage(
+                      f.name || editingItem.name,
+                      categorySlugMap.get(editingItem.categoryId)
+                    ),
+                  }))
+                }
+              >
+                <Sparkles size={14} /> Auto-Suggest Photo
+              </button>
+            </div>
+
+            <label className="form-label" htmlFor="edit-img-url">
+              Image URL (or Pick from Royal Mughlai Gallery Below)
+            </label>
+            <input
+              id="edit-img-url"
+              className="form-input"
+              placeholder="https://images.unsplash.com/..."
+              value={editForm.imageUrl.startsWith("data:") ? "" : editForm.imageUrl}
+              onChange={(e) => setEditForm((f) => ({ ...f, imageUrl: e.target.value }))}
+            />
+
+            {/* Quick-Pick Curated Gallery */}
+            <div style={{ margin: "0.5rem 0 1rem" }}>
+              <span
+                style={{
+                  display: "block",
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  color: "var(--color-text-muted)",
+                  marginBottom: "0.4rem",
+                }}
+              >
+                Tap a photo below to select:
+              </span>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(6, 1fr)",
+                  gap: 6,
+                }}
+              >
+                {CURATED_DISH_PHOTOS.map((p) => {
+                  const selected = editForm.imageUrl === p.url;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setEditForm((f) => ({ ...f, imageUrl: p.url }))}
+                      title={p.label}
+                      style={{
+                        padding: 0,
+                        border: selected
+                          ? "2.5px solid var(--color-primary)"
+                          : "1px solid var(--color-border)",
+                        borderRadius: 8,
+                        overflow: "hidden",
+                        height: 52,
+                        cursor: "pointer",
+                        background: "none",
+                      }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={p.url}
+                        alt={p.label}
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <label className="form-label" htmlFor="edit-name">
+              Dish Name *
+            </label>
+            <input
+              id="edit-name"
+              className="form-input"
+              required
+              minLength={2}
+              value={editForm.name}
+              onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+            />
+
+            <label className="form-label" htmlFor="edit-desc">
+              Description
+            </label>
+            <textarea
+              id="edit-desc"
+              className="form-input"
+              rows={2}
+              value={editForm.description}
+              onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
+            />
+
+            <div className={styles.formRow}>
+              <div>
+                <label className="form-label" htmlFor="edit-price">
+                  Base Price (₹) *
+                </label>
+                <input
+                  id="edit-price"
+                  type="number"
+                  min={1}
+                  required
+                  className="form-input"
+                  value={editForm.priceRupees}
+                  onChange={(e) => setEditForm((f) => ({ ...f, priceRupees: e.target.value }))}
+                />
+              </div>
+              <div style={{ display: "flex", alignItems: "center", paddingTop: "1.4rem" }}>
+                <label className={styles.checkboxLabel}>
+                  <input
+                    type="checkbox"
+                    checked={editForm.isVegetarian}
+                    onChange={(e) =>
+                      setEditForm((f) => ({ ...f, isVegetarian: e.target.checked }))
+                    }
+                  />
+                  Vegetarian Dish
+                </label>
+              </div>
+            </div>
+
+            {editError && (
+              <p className={styles.errorText} role="alert">
+                {editError}
+              </p>
+            )}
+
+            <div className={styles.modalFooter}>
+              <button
+                type="button"
+                onClick={() => setEditingItem(null)}
+                className="btn btn--secondary btn--sm"
+              >
+                Cancel
+              </button>
+              <button type="submit" disabled={editSaving} className="btn btn--primary btn--sm">
+                {editSaving ? "Saving…" : "Save Changes"}
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
@@ -427,7 +887,11 @@ export default function MenuManagerClient({
       {/* Create Dish Modal */}
       {showItemModal && (
         <div className={styles.modalBackdrop} role="dialog" aria-modal="true" aria-label="Add Dish">
-          <form onSubmit={handleCreateItem} className={styles.modal}>
+          <form
+            onSubmit={handleCreateItem}
+            className={styles.modal}
+            style={{ maxWidth: 560, maxHeight: "90vh", overflowY: "auto" }}
+          >
             <div className={styles.modalHeader}>
               <h2>Add New Dish</h2>
               <button type="button" onClick={() => setShowItemModal(false)} className={styles.closeBtn}>
@@ -469,6 +933,112 @@ export default function MenuManagerClient({
               value={itemForm.description}
               onChange={(e) => setItemForm((f) => ({ ...f, description: e.target.value }))}
             />
+
+            {/* Dish Photo Section */}
+            <div style={{ margin: "0.5rem 0" }}>
+              <label className="form-label">Dish Photo</label>
+              <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", marginBottom: "0.5rem" }}>
+                <div
+                  style={{
+                    width: 76,
+                    height: 60,
+                    borderRadius: 8,
+                    overflow: "hidden",
+                    border: "1px solid var(--color-border)",
+                    flexShrink: 0,
+                  }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={
+                      itemForm.imageUrl ||
+                      getSuggestedDishImage(
+                        itemForm.name || "biryani",
+                        categorySlugMap.get(itemForm.categoryId)
+                      )
+                    }
+                    alt="Preview"
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, flex: 1 }}>
+                  <label
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      padding: "0.4rem 0.75rem",
+                      borderRadius: 8,
+                      background: "var(--color-surface-alt)",
+                      border: "1px solid var(--color-border)",
+                      fontSize: "0.78rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      width: "fit-content",
+                    }}
+                  >
+                    <Upload size={13} /> Upload Image File
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        try {
+                          const dataUrl = await compressImageFile(file);
+                          setItemForm((f) => ({ ...f, imageUrl: dataUrl }));
+                        } catch {
+                          setItemError("Could not process image file.");
+                        }
+                      }}
+                    />
+                  </label>
+                  <input
+                    className="form-input"
+                    placeholder="Or paste image URL (auto-selected if left blank)"
+                    value={itemForm.imageUrl.startsWith("data:") ? "" : itemForm.imageUrl}
+                    onChange={(e) => setItemForm((f) => ({ ...f, imageUrl: e.target.value }))}
+                    style={{ fontSize: "0.78rem", padding: "0.35rem 0.6rem" }}
+                  />
+                </div>
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(6, 1fr)",
+                  gap: 5,
+                }}
+              >
+                {CURATED_DISH_PHOTOS.slice(0, 6).map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setItemForm((f) => ({ ...f, imageUrl: p.url }))}
+                    title={p.label}
+                    style={{
+                      padding: 0,
+                      border:
+                        itemForm.imageUrl === p.url
+                          ? "2px solid var(--color-primary)"
+                          : "1px solid var(--color-border)",
+                      borderRadius: 6,
+                      overflow: "hidden",
+                      height: 42,
+                      cursor: "pointer",
+                      background: "none",
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={p.url}
+                      alt={p.label}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <div className={styles.formRow}>
               <div>

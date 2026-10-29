@@ -4,6 +4,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { itemVariants, menuItems } from "@/lib/db/schema";
+import { getSuggestedDishImage } from "@/lib/dish-images";
 
 const variantInputSchema = z.object({
   name: z.string().trim().min(1).max(40),
@@ -15,6 +16,7 @@ const createItemSchema = z.object({
   categoryId: z.string().uuid(),
   name: z.string().trim().min(2).max(100),
   description: z.string().trim().max(400).optional(),
+  imageUrl: z.string().trim().max(1_500_000).optional(),
   pricePaise: z.number().int().min(100).max(10_000_000),
   isVegetarian: z.boolean().default(false),
   isSpicy: z.boolean().default(false),
@@ -65,6 +67,7 @@ export async function POST(req: NextRequest) {
           name: data.name,
           slug,
           description: data.description || null,
+          imageUrl: data.imageUrl || getSuggestedDishImage(data.name),
           pricePaise: data.pricePaise,
           isVegetarian: data.isVegetarian,
           isSpicy: data.isSpicy,

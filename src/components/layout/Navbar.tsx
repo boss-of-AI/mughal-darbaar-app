@@ -3,13 +3,13 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShoppingCart, Menu, X, Phone, Clock, MapPin } from "lucide-react";
+import { ShoppingCart, Menu, X, Phone, Clock, MapPin, User } from "lucide-react";
 import { restaurantConfig } from "@/config/restaurant.config";
 import { useCart } from "@/lib/cart";
 import styles from "./Navbar.module.css";
 
 export default function Navbar() {
-  const { count: cartCount } = useCart();
+  const { count: cartCount, tableToken, setTableToken } = useCart();
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
   // Menu auto-closes on navigation: it is "open" only for the path it was opened on.
@@ -36,6 +36,7 @@ export default function Navbar() {
   const navLinks = [
     { href: "/", label: "Home" },
     { href: "/menu", label: "Menu" },
+    { href: "/profile", label: "My Orders" },
     { href: "/about", label: "Our Story" },
     { href: "/contact", label: "Contact" },
   ];
@@ -102,6 +103,47 @@ export default function Navbar() {
 
           {/* Desktop CTAs */}
           <div className={styles.navActions}>
+            <button
+              type="button"
+              onClick={async () => {
+                if (tableToken) {
+                  setTableToken(null);
+                } else {
+                  try {
+                    const res = await fetch("/api/tables");
+                    const data = await res.json();
+                    const firstToken = data.tables?.[0]?.qrToken || "dine-in-table-1-token";
+                    setTableToken(firstToken);
+                  } catch {
+                    setTableToken("dine-in-table-1-token");
+                  }
+                }
+              }}
+              title="Click to toggle between Order Online and Dine-In mode"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "5px",
+                padding: "0.38rem 0.75rem",
+                borderRadius: "999px",
+                border: "1.5px solid var(--color-border)",
+                background: tableToken ? "#FFFBEB" : "var(--color-surface)",
+                color: tableToken ? "#92400E" : "var(--color-text)",
+                fontSize: "0.76rem",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              {tableToken ? "🪑 Dine-In" : "🛵 Online"}
+            </button>
+            <Link
+              href="/profile"
+              className={styles.cartBtn}
+              title="My Profile & Order History"
+              aria-label="My Profile & Order History"
+            >
+              <User size={19} />
+            </Link>
             <Link href="/menu" className="btn btn--primary btn--sm">
               Order Now
             </Link>
@@ -176,6 +218,10 @@ export default function Navbar() {
         <div className={styles.mobileCtas}>
           <Link href="/menu" className="btn btn--primary btn--full">
             Order Now
+          </Link>
+          <Link href="/profile" className="btn btn--secondary btn--full">
+            <User size={18} />
+            My Profile &amp; Order History
           </Link>
           <Link href="/checkout" className="btn btn--secondary btn--full">
             <ShoppingCart size={18} />

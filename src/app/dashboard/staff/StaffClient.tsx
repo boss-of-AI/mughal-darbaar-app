@@ -8,7 +8,8 @@ export interface StaffMember {
   id: string;
   name: string;
   email: string;
-  role: "owner" | "staff" | "customer";
+  phone?: string | null;
+  role: "owner" | "staff" | "customer" | "rider";
   isActive: boolean;
 }
 
@@ -16,8 +17,9 @@ export default function StaffClient({ initialStaff }: { initialStaff: StaffMembe
   const [staff, setStaff] = useState<StaffMember[]>(initialStaff);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"staff" | "owner">("staff");
+  const [role, setRole] = useState<"staff" | "owner" | "rider">("rider");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,18 +31,19 @@ export default function StaffClient({ initialStaff }: { initialStaff: StaffMembe
       const res = await fetch("/api/dashboard/staff", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, role }),
+        body: JSON.stringify({ name, email, phone: phone || undefined, password, role }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Failed to add staff member");
+        setError(data.error ?? "Failed to add team member");
         return;
       }
       setStaff((prev) => [...prev, data]);
       setName("");
       setEmail("");
+      setPhone("");
       setPassword("");
-      setRole("staff");
+      setRole("rider");
     } finally {
       setSaving(false);
     }
@@ -49,53 +52,84 @@ export default function StaffClient({ initialStaff }: { initialStaff: StaffMembe
   return (
     <div className={styles.page}>
       <div className={styles.header}>
-        <h1 className={styles.title}>Staff Accounts</h1>
+        <h1 className={styles.title}>Staff &amp; Delivery Riders</h1>
         <p className={styles.subtitle}>
-          Create logins for kitchen staff and managers. Staff can manage live orders, tables, and menu items.
+          Create logins for delivery riders, kitchen staff, and managers. Riders log in at{" "}
+          <code>/auth/login</code> to view their allotted delivery orders, navigate via maps, mark
+          &ldquo;Reached&rdquo;, and record COD cash collection.
         </p>
       </div>
 
       <div className={styles.grid}>
         <section className={styles.card}>
-          <h2 className={styles.sectionTitle}>Team Members ({staff.length})</h2>
+          <h2 className={styles.sectionTitle}>Team &amp; Riders ({staff.length})</h2>
           {staff.length === 0 ? (
-            <p className={styles.empty}>No staff accounts found.</p>
+            <p className={styles.empty}>No team accounts found.</p>
           ) : (
             <div className={styles.list}>
               {staff.map((m) => (
                 <div key={m.id} className={styles.row}>
                   <div>
-                    <p className={styles.memberName}>{m.name}</p>
-                    <p className={styles.memberEmail}>{m.email}</p>
+                    <p className={styles.memberName}>
+                      {m.role === "rider" ? "🛵 " : m.role === "owner" ? "👑 " : "👨‍🍳 "}
+                      {m.name}
+                    </p>
+                    <p className={styles.memberEmail}>
+                      {m.email}
+                      {m.phone ? ` · 📞 ${m.phone}` : ""}
+                    </p>
                   </div>
                   <span className={styles.roleBadge}>{m.role}</span>
                 </div>
               ))}
             </div>
           )}
+          <div
+            style={{
+              marginTop: "1rem",
+              padding: "0.75rem 1rem",
+              borderRadius: 10,
+              background: "#FFFBEB",
+              border: "1px solid #FDE68A",
+              fontSize: "0.8rem",
+              color: "#92400E",
+            }}
+          >
+            <strong>🛵 Default Rider Login Ready:</strong> <code>rider@mughaldarbaar.in</code> /{" "}
+            <code>Rider@1234</code>
+          </div>
         </section>
 
         <form onSubmit={handleAddStaff} className={styles.card}>
-          <h2 className={styles.sectionTitle}>Add Staff Member</h2>
+          <h2 className={styles.sectionTitle}>Add Rider or Staff Member</h2>
           <label className="form-label" htmlFor="st-name">Full Name *</label>
           <input
             id="st-name"
             className="form-input"
             required
             minLength={2}
-            placeholder="Salim Khan"
+            placeholder="Imran Khan"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-          <label className="form-label" htmlFor="st-email">Email Address *</label>
+          <label className="form-label" htmlFor="st-email">Email Address (Login ID) *</label>
           <input
             id="st-email"
             type="email"
             className="form-input"
             required
-            placeholder="kitchen@mughaldarbaar.in"
+            placeholder="rider2@mughaldarbaar.in"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+          />
+          <label className="form-label" htmlFor="st-phone">Mobile Number (for customer/rider call)</label>
+          <input
+            id="st-phone"
+            type="tel"
+            className="form-input"
+            placeholder="9876543210"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
           />
           <label className="form-label" htmlFor="st-pwd">Password (min 8 chars) *</label>
           <input
@@ -112,10 +146,11 @@ export default function StaffClient({ initialStaff }: { initialStaff: StaffMembe
             id="st-role"
             className="form-input"
             value={role}
-            onChange={(e) => setRole(e.target.value as "staff" | "owner")}
+            onChange={(e) => setRole(e.target.value as "staff" | "owner" | "rider")}
           >
-            <option value="staff">Staff (Orders, Menu &amp; Tables)</option>
-            <option value="owner">Owner (Full Access + Settings)</option>
+            <option value="rider">🛵 Delivery Rider (Navigation, Reached &amp; COD Collection)</option>
+            <option value="staff">👨‍🍳 Staff / Chef (Orders, Menu, Offers &amp; Tables)</option>
+            <option value="owner">👑 Owner (Full Access + Settings)</option>
           </select>
 
           {error && <p className={styles.errorText} role="alert">{error}</p>}

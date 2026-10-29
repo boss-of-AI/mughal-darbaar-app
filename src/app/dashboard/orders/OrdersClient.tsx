@@ -24,6 +24,11 @@ import styles from "./orders.module.css";
 export type OrderStatus = DashboardOrderPayload["status"];
 export type OrderType = DashboardOrderPayload["orderType"];
 export type Order = DashboardOrderPayload;
+export interface RiderOption {
+  id: string;
+  name: string;
+  phone: string | null;
+}
 type SectionMode = "online" | "dine_in";
 
 // Pleasant multi-tone restaurant order chime via Web Audio API
@@ -284,8 +289,15 @@ const dineInTabs: { key: OrderStatus | "all"; label: string }[] = [
   { key: "delivered", label: "Paid at Counter" },
 ];
 
-export default function OrdersClient({ initial }: { initial: Order[] }) {
+export default function OrdersClient({
+  initial,
+  riders = [],
+}: {
+  initial: Order[];
+  riders?: RiderOption[];
+}) {
   const [orders, setOrders] = useState<Order[]>(initial);
+  const [selectedRiders, setSelectedRiders] = useState<Record<string, string>>({});
   const [section, setSection] = useState<SectionMode>(() => {
     const hasPendingDineIn = initial.some(
       (o) => o.orderType === "dine_in" && (o.status === "pending" || o.status === "out_for_delivery")
@@ -400,7 +412,11 @@ export default function OrdersClient({ initial }: { initial: Order[] }) {
   const updateOrder = useCallback(
     async (
       orderId: string,
-      patch: { status?: OrderStatus; paymentStatus?: Order["paymentStatus"] }
+      patch: {
+        status?: OrderStatus;
+        paymentStatus?: Order["paymentStatus"];
+        riderId?: string | null;
+      }
     ) => {
       setUpdating(orderId);
       try {
@@ -747,6 +763,141 @@ export default function OrdersClient({ initial }: { initial: Order[] }) {
                       </span>
                     </p>
                   )}
+
+                  {/* Rider Allotment & Live Rider Tracking Bar (for Online Delivery Orders) */}
+                  {order.orderType === "delivery" &&
+                    order.status !== "cancelled" &&
+                    order.status !== "rejected" && (
+                      <div
+                        style={{
+                          marginTop: "0.65rem",
+                          padding: "0.65rem 0.75rem",
+                          borderRadius: 10,
+                          background: order.riderReachedAt
+                            ? "#ECFDF5"
+                            : order.riderId
+                            ? "#EFF6FF"
+                            : "var(--color-surface-alt)",
+                          border: order.riderReachedAt
+                            ? "1.5px solid #10B981"
+                            : order.riderId
+                            ? "1px solid #93C5FD"
+                            : "1px dashed var(--color-border)",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            gap: "0.4rem",
+                            flexWrap: "wrap",
+                            marginBottom: order.status !== "delivered" ? "0.45rem" : 0,
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: "0.76rem",
+                              fontWeight: 800,
+                              color: order.riderReachedAt
+                                ? "#047857"
+                                : order.riderId
+                                ? "#1D4ED8"
+                                : "var(--color-text-muted)",
+                            }}
+                          >
+                            {order.riderReachedAt
+                              ? `📍 Rider Reached Location (${order.riderName || "Rider"})`
+                              : order.riderName
+                              ? `🛵 Allotted Rider: ${order.riderName}`
+                              : "🛵 No Rider Allotted Yet"}
+                          </span>
+                          {order.riderPhone && (
+                            <a
+                              href={`tel:${order.riderPhone}`}
+                              style={{
+                                fontSize: "0.72rem",
+                                fontWeight: 700,
+                                color: "#2563EB",
+                                textDecoration: "none",
+                              }}
+                            >
+                              📞 {order.riderPhone}
+                            </a>
+                          )}
+                        </div>
+
+                        {order.status !== "delivered" && riders.length > 0 && (
+                          <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+                            <select
+                              aria-label="Select Delivery Rider"
+                              value={
+                                selectedRiders[order.id] ??
+                                order.riderId ??
+                                riders[0]?.id ??
+                                ""
+                              }
+                              onChange={(e) =>
+                                setSelectedRiders((prev) => ({
+                                  ...prev,
+                                  [order.id]: e.target.value,
+                                }))
+                              }
+                              style={{
+                                flex: 1,
+                                padding: "0.35rem 0.5rem",
+                                borderRadius: 7,
+                                border: "1px solid var(--color-border)",
+                                fontSize: "0.76rem",
+                                fontWeight: 600,
+                                background: "#fff",
+                              }}
+                            >
+                              {riders.map((r) => {
+                                const activeCount = orders.filter(
+                                  (o) =>
+                                    o.riderId === r.id &&
+                                    !["delivered", "cancelled", "rejected"].includes(o.status)
+                                ).length;
+                                return (
+                                  <option key={r.id} value={r.id}>
+                                    {r.name} ({activeCount} active)
+                                  </option>
+                                );
+                              })}
+                            </select>
+                            <button
+                              type="button"
+                              disabled={isUpdating}
+                              onClick={() => {
+                                const chosenId =
+                                  selectedRiders[order.id] ??
+                                  order.riderId ??
+                                  riders[0]?.id;
+                                if (!chosenId) return;
+                                updateOrder(order.id, {
+                                  riderId: chosenId,
+                                  status: "out_for_delivery",
+                                });
+                              }}
+                              style={{
+                                padding: "0.38rem 0.65rem",
+                                borderRadius: 7,
+                                border: "none",
+                                background: "#2563EB",
+                                color: "#fff",
+                                fontSize: "0.74rem",
+                                fontWeight: 800,
+                                cursor: "pointer",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {order.riderId ? "Re-Allot" : "🛵 Allot & Dispatch"}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                 </div>
 
                 {/* Ordered Items List */}

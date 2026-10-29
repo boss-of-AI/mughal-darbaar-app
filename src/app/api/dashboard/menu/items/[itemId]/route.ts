@@ -9,6 +9,7 @@ import { menuItems } from "@/lib/db/schema";
 const patchItemSchema = z.object({
   name: z.string().trim().min(2).max(100).optional(),
   description: z.string().trim().max(400).nullable().optional(),
+  imageUrl: z.string().trim().max(1_500_000).nullable().optional(),
   pricePaise: z.number().int().min(100).max(10_000_000).optional(),
   status: z.enum(["available", "unavailable", "archived"]).optional(),
   isVegetarian: z.boolean().optional(),

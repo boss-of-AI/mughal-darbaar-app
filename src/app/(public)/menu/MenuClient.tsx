@@ -4,6 +4,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { Search, ShoppingCart, Plus, Minus, Leaf, Flame, Star, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCart, cartKey } from "@/lib/cart";
+import { getSuggestedDishImage } from "@/lib/dish-images";
 import styles from "./menu.module.css";
 
 // ── Types ─────────────────────────────────────────────────────
@@ -62,12 +63,35 @@ export default function MenuClient({
 }: MenuClientProps) {
   const [activeCategory, setActiveCategory] = useState(categories[0]?.id ?? "");
   const router = useRouter();
-  const { lines, count: cartCount, subtotalPaise: subtotal, add, remove } = useCart();
+  const {
+    lines,
+    count: cartCount,
+    subtotalPaise: subtotal,
+    tableToken,
+    setTableToken,
+    add,
+    remove,
+  } = useCart();
   const [sel, setSel] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [vegOnly, setVegOnly] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
+  const [tables, setTables] = useState<
+    { id: string; name: string; capacity: number; qrToken: string }[]
+  >([]);
   const categoryRefs = useRef<Record<string, HTMLElement | null>>({});
+
+  useEffect(() => {
+    fetch("/api/tables", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d.tables)) setTables(d.tables);
+      })
+      .catch(() => {});
+  }, []);
+
+  const activeTableName =
+    tables.find((t) => t.qrToken === tableToken)?.name ?? (tableToken ? "Dine-In Table" : null);
 
   const actualDeliveryFee = subtotal >= freeDeliveryAbove ? 0 : deliveryFee;
   const gstRate = parseFloat(gstPercent) / 100;
@@ -145,6 +169,84 @@ export default function MenuClient({
               <p className={styles.subtitle}>
                 {categories.reduce((sum, c) => sum + c.items.length, 0)} authentic Mughal dishes
               </p>
+            </div>
+
+            {/* Dine-In vs Order Online Toggle */}
+            <div
+              role="group"
+              aria-label="Order Mode Toggle"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.45rem",
+                background: "var(--color-surface)",
+                border: "1.5px solid var(--color-border)",
+                borderRadius: 999,
+                padding: "4px",
+                flexWrap: "wrap",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setTableToken(null)}
+                style={{
+                  padding: "0.45rem 0.95rem",
+                  borderRadius: 999,
+                  border: "none",
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  background: !tableToken ? "var(--color-primary)" : "transparent",
+                  color: !tableToken ? "#fff" : "var(--color-text-muted)",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                🛵 Order Online
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!tableToken) {
+                    setTableToken(tables[0]?.qrToken || "dine-in-table-1-token");
+                  }
+                }}
+                style={{
+                  padding: "0.45rem 0.95rem",
+                  borderRadius: 999,
+                  border: "none",
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  background: tableToken ? "var(--color-primary)" : "transparent",
+                  color: tableToken ? "#fff" : "var(--color-text-muted)",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                🪑 Dine-In {activeTableName ? `(${activeTableName})` : ""}
+              </button>
+              {tableToken && tables.length > 0 && (
+                <select
+                  aria-label="Select Dine-In Table"
+                  value={tableToken}
+                  onChange={(e) => setTableToken(e.target.value)}
+                  style={{
+                    padding: "0.35rem 0.65rem",
+                    borderRadius: 999,
+                    border: "1px solid var(--color-border)",
+                    fontSize: "0.78rem",
+                    fontWeight: 700,
+                    background: "#FFFBEB",
+                    color: "#92400E",
+                    cursor: "pointer",
+                  }}
+                >
+                  {tables.map((t) => (
+                    <option key={t.id} value={t.qrToken}>
+                      🪑 {t.name} ({t.capacity} seats)
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div className={styles.filters}>
@@ -262,11 +364,20 @@ export default function MenuClient({
                           key={item.id}
                           className={`${styles.itemCard} ${item.isFeatured ? styles.itemCardFeatured : ""}`}
                         >
-                          {/* Emoji area (replaced by image when available) */}
+                          {/* Dish Photo (with suggested Mughlai photo fallback) */}
                           <div className={styles.itemImageWrap}>
-                            <span className={styles.itemEmoji} aria-hidden="true">
-                              {getCategoryEmoji(cat.slug)}
-                            </span>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={item.imageUrl || getSuggestedDishImage(item.name, cat.slug)}
+                              alt={item.name}
+                              loading="lazy"
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                display: "block",
+                              }}
+                            />
                             {item.isFeatured && (
                               <span className={styles.featuredBadge}>
                                 <Star size={10} fill="currentColor" /> Chef&apos;s Pick
@@ -501,18 +612,4 @@ export default function MenuClient({
       </div>
     </div>
   );
-}
-
-// Emoji fallback per category slug
-function getCategoryEmoji(slug: string): string {
-  const map: Record<string, string> = {
-    "biryanis": "🍛",
-    "kebabs-grills": "🥩",
-    "curries-gravies": "🍲",
-    "breads": "🫓",
-    "starters-snacks": "🔥",
-    "desserts": "🍮",
-    "drinks": "🥛",
-  };
-  return map[slug] ?? "🍽️";
 }

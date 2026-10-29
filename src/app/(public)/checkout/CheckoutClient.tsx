@@ -57,37 +57,52 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
   const router = useRouter();
   const { lines, subtotalPaise, tableToken, add, remove, clear, setTableToken } = useCart();
 
+  const [tables, setTables] = useState<
+    { id: string; name: string; capacity: number; qrToken: string }[]
+  >([]);
+
   const modes: { id: Mode; label: string; on: boolean }[] = [
-    { id: "delivery", label: "🛵 Delivery", on: cfg.deliveryEnabled && !tableToken },
-    { id: "pickup", label: "🏃 Pickup", on: cfg.pickupEnabled && !tableToken },
-    { id: "dine_in", label: "🪑 Dine-in", on: cfg.dineInEnabled && !!tableToken },
+    { id: "delivery", label: "🛵 Delivery", on: cfg.deliveryEnabled },
+    { id: "pickup", label: "🏃 Pickup", on: cfg.pickupEnabled },
+    { id: "dine_in", label: "🪑 Dine-in", on: cfg.dineInEnabled },
   ];
   const available = modes.filter((m) => m.on);
   const [picked, setPicked] = useState<Mode | null>(null);
-  const mode: Mode = tableToken
-    ? "dine_in"
-    : picked && available.some((m) => m.id === picked)
+  const mode: Mode = picked
     ? picked
+    : tableToken
+    ? "dine_in"
     : (available[0]?.id ?? "pickup");
 
   const [payChoice, setPayChoice] = useState<PayChoice>(
     cfg.onlinePaymentEnabled ? "razorpay" : "offline"
   );
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [locMsg, setLocMsg] = useState<string | null>(null);
+
   const [form, setForm] = useState(() => {
     if (typeof window !== "undefined") {
       try {
         const savedGuest = window.localStorage.getItem("md_guest_info");
         if (savedGuest) {
-          const g = JSON.parse(savedGuest) as { name?: string; phone?: string; email?: string };
+          const g = JSON.parse(savedGuest) as {
+            name?: string;
+            phone?: string;
+            email?: string;
+            line1?: string;
+            city?: string;
+            pincode?: string;
+          };
           return {
             name: g.name || "",
             phone: g.phone || "",
             email: g.email || "",
-            line1: "",
+            line1: g.line1 || "",
             line2: "",
             landmark: "",
-            city: "Mumbai",
-            pincode: "",
+            city: g.city || "Mumbai",
+            pincode: g.pincode || "",
             notes: "",
           };
         }
@@ -129,6 +144,13 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
       })
       .catch(() => {});
 
+    fetch("/api/tables", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d.tables)) setTables(d.tables);
+      })
+      .catch(() => {});
+
     const onApplied = (e: Event) => {
       const code = (e as CustomEvent<string>).detail;
       if (code) setCouponCode(code);
@@ -136,6 +158,69 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
     window.addEventListener("md_coupon_applied", onApplied);
     return () => window.removeEventListener("md_coupon_applied", onApplied);
   }, []);
+
+  function handleDetectLocation() {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setLocMsg("Geolocation is not supported by your browser.");
+      return;
+    }
+    setLocating(true);
+    setLocMsg("Detecting your GPS coordinates…");
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = Number(pos.coords.latitude.toFixed(6));
+        const lng = Number(pos.coords.longitude.toFixed(6));
+        setCoords({ lat, lng });
+
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+            { headers: { "Accept-Language": "en" } }
+          );
+          if (res.ok) {
+            const data = await res.json();
+            const addr = data.address || {};
+            const streetParts = [
+              addr.house_number,
+              addr.building,
+              addr.road || addr.pedestrian,
+              addr.neighbourhood || addr.suburb,
+            ].filter(Boolean);
+            const detectedLine1 =
+              streetParts.join(", ") ||
+              (typeof data.display_name === "string"
+                ? data.display_name.split(",").slice(0, 3).join(",").trim()
+                : "");
+            const detectedCity =
+              addr.city || addr.town || addr.village || addr.state_district || "Mumbai";
+            const detectedPin =
+              typeof addr.postcode === "string"
+                ? addr.postcode.replace(/\D/g, "").slice(0, 6)
+                : "";
+
+            setForm((prev) => ({
+              ...prev,
+              line1: detectedLine1 || prev.line1,
+              city: detectedCity || prev.city,
+              pincode: detectedPin.length === 6 ? detectedPin : prev.pincode,
+            }));
+            setLocMsg(`✓ Exact GPS pin locked (${lat}, ${lng}) & address filled!`);
+          } else {
+            setLocMsg(`✓ Exact GPS pin locked (${lat}, ${lng})!`);
+          }
+        } catch {
+          setLocMsg(`✓ Exact GPS pin locked (${lat}, ${lng})!`);
+        } finally {
+          setLocating(false);
+        }
+      },
+      () => {
+        setLocating(false);
+        setLocMsg("Location permission denied or unavailable. Please type your address below.");
+      },
+      { enableHighAccuracy: true, timeout: 12000 }
+    );
+  }
 
   const set =
     (k: keyof typeof form) =>
@@ -213,11 +298,22 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
       try {
         window.localStorage.setItem(
           "md_guest_info",
-          JSON.stringify({ name: form.name, phone: form.phone, email: form.email })
+          JSON.stringify({
+            name: form.name,
+            phone: form.phone,
+            email: form.email,
+            line1: form.line1,
+            city: form.city,
+            pincode: form.pincode,
+          })
         );
       } catch {
         /* ignore */
       }
+      const effectiveTableToken =
+        mode === "dine_in"
+          ? tableToken || tables[0]?.qrToken || "dine-in-table-1-token"
+          : undefined;
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -245,9 +341,10 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
                   landmark: form.landmark || undefined,
                   city: form.city,
                   pincode: form.pincode,
+                  ...(coords ? { lat: coords.lat, lng: coords.lng } : {}),
                 }
               : undefined,
-          tableToken: mode === "dine_in" ? (tableToken ?? undefined) : undefined,
+          tableToken: effectiveTableToken,
           specialInstructions: form.notes || undefined,
         }),
       });
@@ -255,6 +352,19 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
       if (!res.ok) {
         setError(data.error ?? "Could not place order. Please check your details.");
         return;
+      }
+
+      try {
+        const rawIds = window.localStorage.getItem("md_order_ids");
+        const prevIds: string[] = rawIds ? JSON.parse(rawIds) : [];
+        if (data.orderId && !prevIds.includes(data.orderId)) {
+          window.localStorage.setItem(
+            "md_order_ids",
+            JSON.stringify([data.orderId, ...prevIds].slice(0, 50))
+          );
+        }
+      } catch {
+        /* ignore */
       }
 
       if (data.razorpay) {
@@ -328,14 +438,33 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
       <h1 className={styles.title}>Checkout</h1>
       <div className={styles.grid}>
         <form onSubmit={submit} noValidate className={styles.card}>
-          {tableToken ? (
+          <div role="radiogroup" aria-label="Order type" className={styles.modes}>
+            {available.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                role="radio"
+                aria-checked={mode === m.id}
+                className={`${styles.mode} ${mode === m.id ? styles.modeOn : ""}`}
+                onClick={() => {
+                  setPicked(m.id);
+                  if (m.id === "dine_in") {
+                    if (!tableToken) {
+                      setTableToken(tables[0]?.qrToken || "dine-in-table-1-token");
+                    }
+                  } else {
+                    setTableToken(null);
+                  }
+                }}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+
+          {mode === "dine_in" && (
             <div
               style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                flexWrap: "wrap",
-                gap: "0.5rem",
                 padding: "0.75rem 1rem",
                 borderRadius: "10px",
                 background: "#FFFBEB",
@@ -343,40 +472,41 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
                 marginBottom: "0.75rem",
               }}
             >
-              <span style={{ fontSize: "0.88rem", fontWeight: 700, color: "#92400E" }}>
-                🪑 Dine-in Table Order — Final bill paid at counter after your meal.
-              </span>
-              <button
-                type="button"
-                onClick={() => setTableToken(null)}
+              <div
                 style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "#B45309",
-                  fontSize: "0.76rem",
-                  fontWeight: 700,
-                  textDecoration: "underline",
-                  cursor: "pointer",
-                  padding: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: "0.5rem",
                 }}
               >
-                Switch to Online Delivery / Pickup
-              </button>
-            </div>
-          ) : (
-            <div role="radiogroup" aria-label="Order type" className={styles.modes}>
-              {available.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={mode === m.id}
-                  className={`${styles.mode} ${mode === m.id ? styles.modeOn : ""}`}
-                  onClick={() => setPicked(m.id)}
-                >
-                  {m.label}
-                </button>
-              ))}
+                <span style={{ fontSize: "0.86rem", fontWeight: 700, color: "#92400E" }}>
+                  🪑 Dine-in Table Order — Final bill paid at counter after your meal.
+                </span>
+                {tables.length > 0 && (
+                  <select
+                    aria-label="Select your table"
+                    value={tableToken || tables[0]?.qrToken || ""}
+                    onChange={(e) => setTableToken(e.target.value)}
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: 8,
+                      border: "1px solid #D97706",
+                      background: "#FFFFFF",
+                      color: "#92400E",
+                      fontSize: "0.8rem",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {tables.map((t) => (
+                      <option key={t.id} value={t.qrToken}>
+                        {t.name} ({t.capacity} seats)
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
             </div>
           )}
           <p className={styles.note}>
@@ -393,7 +523,77 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
 
           {mode === "delivery" && (
             <>
-              <label className="form-label" htmlFor="co-l1">Address *</label>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: "0.5rem",
+                  marginTop: "0.5rem",
+                }}
+              >
+                <label className="form-label" htmlFor="co-l1" style={{ margin: 0 }}>
+                  Delivery Address *
+                </label>
+                <button
+                  type="button"
+                  onClick={handleDetectLocation}
+                  disabled={locating}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "5px",
+                    padding: "0.35rem 0.75rem",
+                    borderRadius: "8px",
+                    border: "1px solid #2563EB",
+                    background: "#EFF6FF",
+                    color: "#1D4ED8",
+                    fontSize: "0.78rem",
+                    fontWeight: 700,
+                    cursor: locating ? "wait" : "pointer",
+                  }}
+                >
+                  📍 {locating ? "Detecting GPS…" : "Use My Current Location (Free GPS)"}
+                </button>
+              </div>
+              {locMsg && (
+                <p
+                  style={{
+                    fontSize: "0.78rem",
+                    color: coords ? "#059669" : "#B45309",
+                    fontWeight: 600,
+                    margin: "0.25rem 0",
+                  }}
+                >
+                  {locMsg}
+                </p>
+              )}
+              {coords && (
+                <div
+                  style={{
+                    width: "100%",
+                    height: 155,
+                    borderRadius: 10,
+                    overflow: "hidden",
+                    border: "1px solid var(--color-border)",
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  <iframe
+                    title="Your Delivery Location Map"
+                    width="100%"
+                    height="100%"
+                    style={{ border: 0 }}
+                    loading="lazy"
+                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${
+                      coords.lng - 0.004
+                    }%2C${coords.lat - 0.003}%2C${coords.lng + 0.004}%2C${
+                      coords.lat + 0.003
+                    }&layer=mapnik&marker=${coords.lat}%2C${coords.lng}`}
+                  />
+                </div>
+              )}
               <input id="co-l1" className="form-input" required value={form.line1} onChange={set("line1")} placeholder="Flat / building / street" autoComplete="address-line1" />
               <input aria-label="Address line 2" className="form-input" value={form.line2} onChange={set("line2")} placeholder="Area (optional)" autoComplete="address-line2" />
               <input aria-label="Landmark" className="form-input" value={form.landmark} onChange={set("landmark")} placeholder="Landmark (optional)" />

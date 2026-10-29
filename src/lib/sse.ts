@@ -48,8 +48,14 @@ export interface DashboardOrderPayload {
     landmark?: string;
     city: string;
     pincode: string;
+    lat?: number;
+    lng?: number;
   } | null;
   specialInstructions: string | null;
+  riderId: string | null;
+  riderName: string | null;
+  riderPhone: string | null;
+  riderReachedAt: string | null;
 }
 
 export async function buildDashboardOrderPayload(
@@ -137,6 +143,10 @@ export async function buildDashboardOrderPayload(
     items,
     deliveryAddress: (order.deliveryAddress as DashboardOrderPayload["deliveryAddress"]) ?? null,
     specialInstructions: order.specialInstructions ?? null,
+    riderId: order.riderId ?? null,
+    riderName: order.riderName ?? null,
+    riderPhone: order.riderPhone ?? null,
+    riderReachedAt: order.riderReachedAt ? order.riderReachedAt.toISOString() : null,
   };
 }
 

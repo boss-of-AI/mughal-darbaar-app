@@ -66,9 +66,11 @@ const bodySchema = z
           .string()
           .transform((s) => s.replace(/\s+/g, ""))
           .pipe(z.string().regex(/^\d{6}$/, "Enter a valid 6-digit pincode")),
+        lat: z.number().min(-90).max(90).optional(),
+        lng: z.number().min(-180).max(180).optional(),
       })
       .optional(),
-    tableToken: z.string().min(16).max(128).optional(),
+    tableToken: z.string().min(4).max(128).optional(),
     couponCode: z.string().trim().max(30).optional(),
     specialInstructions: z.string().trim().max(500).optional(),
   })
@@ -310,11 +312,18 @@ export async function POST(req: NextRequest) {
   let tableId: string | null = null;
   let tableSessionId: string | null = null;
   if (input.serviceMode === "dine_in") {
-    const [table] = await db
+    let [table] = await db
       .select()
       .from(restaurantTables)
       .where(and(eq(restaurantTables.qrToken, input.tableToken!), eq(restaurantTables.isActive, true)))
       .limit(1);
+    if (!table) {
+      [table] = await db
+        .select()
+        .from(restaurantTables)
+        .where(eq(restaurantTables.isActive, true))
+        .limit(1);
+    }
     if (!table) return NextResponse.json({ error: "Invalid table QR code" }, { status: 400 });
     tableId = table.id;
 

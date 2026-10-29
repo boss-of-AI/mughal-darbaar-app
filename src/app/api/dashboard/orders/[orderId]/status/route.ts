@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { orders, tableSessions } from "@/lib/db/schema";
+import { orders, tableSessions, users } from "@/lib/db/schema";
 import { eq, and, notInArray } from "drizzle-orm";
 import { z } from "zod";
 import { buildDashboardOrderPayload, pushOrderEvent } from "@/lib/sse";
@@ -23,9 +23,10 @@ const statusSchema = z
     paymentStatus: z
       .enum(["pending", "paid", "failed", "refunded", "pay_at_counter"])
       .optional(),
+    riderId: z.string().uuid().nullable().optional(),
   })
-  .refine((d) => Boolean(d.status || d.paymentStatus), {
-    message: "Provide status or paymentStatus",
+  .refine((d) => Boolean(d.status || d.paymentStatus || d.riderId !== undefined), {
+    message: "Provide status, paymentStatus, or riderId",
   });
 
 export async function PATCH(
@@ -33,7 +34,7 @@ export async function PATCH(
   { params }: { params: Promise<{ orderId: string }> }
 ) {
   const session = await auth();
-  if (!session?.user || !["owner", "staff"].includes(session.user.role)) {
+  if (!session?.user || !["owner", "staff", "rider"].includes(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -45,7 +46,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid update payload" }, { status: 400 });
   }
 
-  const { status, paymentStatus } = parsed.data;
+  const { status, paymentStatus, riderId } = parsed.data;
   const now = new Date();
 
   const [existing] = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
@@ -54,6 +55,25 @@ export async function PATCH(
   }
 
   const updates: Partial<typeof orders.$inferInsert> = { updatedAt: now };
+
+  if (riderId !== undefined) {
+    if (riderId === null) {
+      updates.riderId = null;
+      updates.riderName = null;
+      updates.riderPhone = null;
+    } else {
+      const [rider] = await db
+        .select({ id: users.id, name: users.name, phone: users.phone })
+        .from(users)
+        .where(eq(users.id, riderId))
+        .limit(1);
+      if (rider) {
+        updates.riderId = rider.id;
+        updates.riderName = rider.name ?? "Delivery Rider";
+        updates.riderPhone = rider.phone ?? null;
+      }
+    }
+  }
 
   if (status) {
     updates.status = status;
@@ -139,8 +159,11 @@ export async function PATCH(
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
 
-  // Broadcast to all connected kitchen screens
+  // Broadcast to all connected kitchen & rider screens
   pushOrderEvent("order_updated", payload);
+  if (riderId) {
+    pushOrderEvent("rider_assigned", payload);
+  }
 
   return NextResponse.json(payload);
 }

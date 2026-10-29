@@ -5,20 +5,21 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
   LayoutDashboard, ShoppingBag, UtensilsCrossed,
-  Settings, Users, QrCode, BarChart3, LogOut, ChevronRight, Tag
+  Settings, Users, QrCode, BarChart3, LogOut, ChevronRight, Tag, Navigation
 } from "lucide-react";
 import { restaurantConfig } from "@/config/restaurant.config";
 import styles from "./DashboardSidebar.module.css";
 
 const navItems = [
-  { href: "/dashboard",          icon: LayoutDashboard,  label: "Overview",       exact: true },
-  { href: "/dashboard/orders",   icon: ShoppingBag,      label: "Orders",         badge: "live" },
+  { href: "/dashboard",          icon: LayoutDashboard,  label: "Overview",         exact: true },
+  { href: "/dashboard/orders",   icon: ShoppingBag,      label: "Orders",           badge: "live" },
+  { href: "/dashboard/rider",    icon: Navigation,       label: "Rider Portal",     badge: "live", riderAllowed: true },
   { href: "/dashboard/menu",     icon: UtensilsCrossed,  label: "Menu Manager" },
   { href: "/dashboard/offers",   icon: Tag,              label: "Offers & Coupons" },
   { href: "/dashboard/tables",   icon: QrCode,           label: "Tables & QR" },
   { href: "/dashboard/reports",  icon: BarChart3,        label: "Reports" },
-  { href: "/dashboard/staff",    icon: Users,            label: "Staff",          ownerOnly: true },
-  { href: "/dashboard/settings", icon: Settings,         label: "Settings",       ownerOnly: true },
+  { href: "/dashboard/staff",    icon: Users,            label: "Staff & Riders" },
+  { href: "/dashboard/settings", icon: Settings,         label: "Settings",         ownerOnly: true },
 ];
 
 interface Props { userRole?: string; userName?: string; }
@@ -29,6 +30,15 @@ export default function DashboardSidebar({ userRole, userName }: Props) {
   const isActive = (href: string, exact?: boolean) =>
     exact ? pathname === href : pathname.startsWith(href);
 
+  const visibleItems = navItems.filter((item) => {
+    if (userRole === "rider") return Boolean(item.riderAllowed);
+    if (item.ownerOnly && userRole !== "owner") return false;
+    return true;
+  });
+
+  const portalLabel =
+    userRole === "owner" ? "Owner" : userRole === "rider" ? "Delivery Rider" : "Staff";
+
   return (
     <aside className={styles.sidebar} aria-label="Dashboard navigation">
       {/* Brand */}
@@ -38,15 +48,13 @@ export default function DashboardSidebar({ userRole, userName }: Props) {
         </div>
         <div>
           <p className={styles.brandName}>{restaurantConfig.name}</p>
-          <p className={styles.brandRole}>{userRole === "owner" ? "Owner" : "Staff"} Portal</p>
+          <p className={styles.brandRole}>{portalLabel} Portal</p>
         </div>
       </div>
 
       {/* Nav */}
       <nav className={styles.nav} aria-label="Dashboard menu">
-        {navItems
-          .filter((item) => !item.ownerOnly || userRole === "owner")
-          .map((item) => (
+        {visibleItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}

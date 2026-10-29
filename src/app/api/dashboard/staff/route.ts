@@ -9,14 +9,15 @@ import { users } from "@/lib/db/schema";
 const createStaffSchema = z.object({
   name: z.string().trim().min(2).max(80),
   email: z.string().trim().email().max(120),
+  phone: z.string().trim().max(25).optional(),
   password: z.string().min(8).max(72),
-  role: z.enum(["staff", "owner"]).default("staff"),
+  role: z.enum(["staff", "owner", "rider"]).default("staff"),
 });
 
 export async function POST(req: NextRequest) {
   const session = await auth();
-  if (!session?.user || session.user.role !== "owner") {
-    return NextResponse.json({ error: "Owner access required" }, { status: 403 });
+  if (!session?.user || !["owner", "staff"].includes(session.user.role)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
   let body: unknown;
@@ -31,7 +32,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid staff details" }, { status: 400 });
   }
 
-  const { name, email, password, role } = parsed.data;
+  const { name, email, phone, password, role } = parsed.data;
+  if (session.user.role !== "owner" && role === "owner") {
+    return NextResponse.json({ error: "Only owners can create another owner account" }, { status: 403 });
+  }
   const normalizedEmail = email.toLowerCase();
 
   try {
@@ -51,6 +55,7 @@ export async function POST(req: NextRequest) {
       .values({
         name,
         email: normalizedEmail,
+        phone: phone || null,
         passwordHash,
         role,
         isActive: true,
@@ -59,6 +64,7 @@ export async function POST(req: NextRequest) {
         id: users.id,
         name: users.name,
         email: users.email,
+        phone: users.phone,
         role: users.role,
         isActive: users.isActive,
         createdAt: users.createdAt,
@@ -66,6 +72,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(created, { status: 201 });
   } catch {
-    return NextResponse.json({ error: "Failed to create staff member" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to create team member" }, { status: 500 });
   }
 }
