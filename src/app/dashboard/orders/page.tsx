@@ -33,7 +33,7 @@ export default async function OrdersPage() {
         })
         .from(users)
         .where(eq(users.role, "rider")),
-      fetchDashboardOrders({ limit: 100 }),
+      fetchDashboardOrders({ limit: 300 }),
     ]);
 
     if (settingsRow) {

@@ -13,18 +13,20 @@ export default auth((req) => {
     if (!["owner", "staff", "chef", "rider"].includes(session.user.role)) {
       return NextResponse.redirect(new URL("/", req.url));
     }
-    // Riders are restricted to the Rider Delivery & Navigation Portal
+    // Riders are restricted to the Rider Delivery & Navigation Portal + My Account
     if (
       session.user.role === "rider" &&
-      !pathname.startsWith("/dashboard/rider")
+      !pathname.startsWith("/dashboard/rider") &&
+      !pathname.startsWith("/dashboard/account")
     ) {
       return NextResponse.redirect(new URL("/dashboard/rider", req.url));
     }
-    // Chefs are routed to Kitchen Live Orders (/dashboard/orders) & Menu Stock (/dashboard/menu)
+    // Chefs are routed to Kitchen Live Orders (/dashboard/orders), Menu Stock (/dashboard/menu) & My Account
     if (
       session.user.role === "chef" &&
       !pathname.startsWith("/dashboard/orders") &&
-      !pathname.startsWith("/dashboard/menu")
+      !pathname.startsWith("/dashboard/menu") &&
+      !pathname.startsWith("/dashboard/account")
     ) {
       return NextResponse.redirect(new URL("/dashboard/orders", req.url));
     }

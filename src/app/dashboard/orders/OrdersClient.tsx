@@ -16,6 +16,12 @@ import {
   Banknote,
   MapPin,
   Receipt,
+  Calendar,
+  History,
+  Trash2,
+  EyeOff,
+  Eye,
+  ShieldCheck,
 } from "lucide-react";
 import type { DashboardOrderPayload } from "@/lib/sse";
 import type { StoreAvailabilityResult } from "@/lib/store-hours";
@@ -31,6 +37,52 @@ export interface RiderOption {
   phone: string | null;
 }
 type SectionMode = "online" | "dine_in";
+type TimePeriodTab = "today" | "past_week";
+type SystematicTabKey = "new" | "pending" | "completed" | "rejected" | "all";
+
+const HIDDEN_PAST_ORDERS_STORAGE_KEY = "mughal_darbaar_hidden_past_orders_v1";
+
+/**
+ * Returns YYYY-MM-DD in Asia/Kolkata (IST) so client and server agree on Today vs Past Orders.
+ */
+function getIstDateKey(dateInput: Date | string): string {
+  try {
+    const d = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(d);
+  } catch {
+    return "";
+  }
+}
+
+function isOrderFromTodayIst(createdAtIso: string, todayKey: string): boolean {
+  return getIstDateKey(createdAtIso) === todayKey;
+}
+
+/**
+ * Classifies an order into the systematic tabs requested for Admin, Staff, and Chef:
+ * - "new": Newly arrived orders waiting to be accepted (`pending`)
+ * - "pending": In-progress orders (`confirmed`, `preparing`, `ready`, `out_for_delivery`)
+ * - "completed": Completed & settled orders (`delivered`)
+ * - "rejected": Rejected or cancelled orders (`rejected`, `cancelled`)
+ */
+function getOrderSystematicGroup(order: Order): Exclude<SystematicTabKey, "all"> {
+  if (order.status === "pending") return "new";
+  if (
+    order.status === "confirmed" ||
+    order.status === "preparing" ||
+    order.status === "ready" ||
+    order.status === "out_for_delivery"
+  ) {
+    return "pending";
+  }
+  if (order.status === "delivered") return "completed";
+  return "rejected";
+}
 
 // Pleasant multi-tone restaurant order chime via Web Audio API
 function playOrderChime(type: "new_order" | "bill_generated" = "new_order") {
@@ -97,7 +149,7 @@ function getStatusBadgeConfig(order: Order): {
       return { label: "New · To Accept", icon: Clock, color: "#D97706", bg: "#FEF3C7" };
     case "confirmed":
     case "preparing":
-      return { label: "Order Placed", icon: CheckCircle, color: "#2563EB", bg: "#DBEAFE" };
+      return { label: "Order Placed · Cooking", icon: CheckCircle, color: "#2563EB", bg: "#DBEAFE" };
     case "ready":
       return { label: "Food Ready for Rider", icon: Package, color: "#7C3AED", bg: "#EDE9FE" };
     case "out_for_delivery":
@@ -311,22 +363,42 @@ function getNextAction(
   }
 }
 
-const onlineTabs: { key: OrderStatus | "all"; label: string }[] = [
-  { key: "all", label: "All Online" },
-  { key: "pending", label: "New (To Accept)" },
-  { key: "confirmed", label: "Order Placed" },
-  { key: "out_for_delivery", label: "Out for Delivery" },
-  { key: "delivered", label: "Delivered" },
-  { key: "rejected", label: "Rejected & Refunds" },
-];
-
-const dineInTabs: { key: OrderStatus | "all"; label: string }[] = [
-  { key: "all", label: "All Dine-In" },
-  { key: "pending", label: "New (To Accept)" },
-  { key: "confirmed", label: "Order Accepted" },
-  { key: "ready", label: "Order Is Ready" },
-  { key: "out_for_delivery", label: "Final Bill Generated" },
-  { key: "delivered", label: "Paid at Counter" },
+const SYSTEMATIC_TABS: {
+  key: SystematicTabKey;
+  label: string;
+  onlineDesc: string;
+  dineInDesc: string;
+}[] = [
+  {
+    key: "new",
+    label: "🆕 New Orders",
+    onlineDesc: "To Accept",
+    dineInDesc: "To Accept",
+  },
+  {
+    key: "pending",
+    label: "⏳ Pending Orders",
+    onlineDesc: "Cooking / Ready / Out for Delivery",
+    dineInDesc: "Cooking / Ready / Final Bill",
+  },
+  {
+    key: "completed",
+    label: "✅ Completed Orders",
+    onlineDesc: "Delivered",
+    dineInDesc: "Paid at Counter",
+  },
+  {
+    key: "rejected",
+    label: "❌ Rejected & Refunds",
+    onlineDesc: "Rejected / Cancelled",
+    dineInDesc: "Rejected / Cancelled",
+  },
+  {
+    key: "all",
+    label: "📋 All Orders",
+    onlineDesc: "Every status",
+    dineInDesc: "Every status",
+  },
 ];
 
 export default function OrdersClient({
@@ -355,17 +427,58 @@ export default function OrdersClient({
   const [timingsMsg, setTimingsMsg] = useState<string | null>(null);
   const [refundTokenInputs, setRefundTokenInputs] = useState<Record<string, string>>({});
   const [refundErrors, setRefundErrors] = useState<Record<string, string>>({});
+
+  // ── Primary Time Period Tab: Today's Orders vs Past Week Orders ──
+  const [timePeriod, setTimePeriod] = useState<TimePeriodTab>("today");
+
+  // ── Hidden Past Orders (persisted in localStorage for Admin) ──
+  const [hiddenOrderIds, setHiddenOrderIds] = useState<string[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const raw = window.localStorage.getItem(HIDDEN_PAST_ORDERS_STORAGE_KEY);
+      return raw ? (JSON.parse(raw) as string[]) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [showHiddenPastOrders, setShowHiddenPastOrders] = useState(false);
+  const [pastActionFeedback, setPastActionFeedback] = useState<string | null>(null);
+  const [bulkDeletingPast, setBulkDeletingPast] = useState(false);
+
   const [section, setSection] = useState<SectionMode>(() => {
-    const hasPendingDineIn = initial.some(
-      (o) => o.orderType === "dine_in" && (o.status === "pending" || o.status === "out_for_delivery")
+    const todayKey = getIstDateKey(new Date());
+    const todayInitial = initial.filter((o) => isOrderFromTodayIst(o.createdAt, todayKey));
+    const hasPendingDineIn = todayInitial.some(
+      (o) =>
+        o.orderType === "dine_in" &&
+        (o.status === "pending" || o.status === "out_for_delivery")
     );
-    const hasPendingOnline = initial.some(
+    const hasPendingOnline = todayInitial.some(
       (o) => o.orderType !== "dine_in" && o.status === "pending"
     );
     if (hasPendingDineIn && !hasPendingOnline) return "dine_in";
     return "online";
   });
-  const [filter, setFilter] = useState<OrderStatus | "all">("all");
+
+  // Default systematic tab: start on "new" if there are new orders today, else "pending" if active orders exist, else "all"
+  const [systematicTab, setSystematicTab] = useState<SystematicTabKey>(() => {
+    const todayKey = getIstDateKey(new Date());
+    const todayInitial = initial.filter((o) => isOrderFromTodayIst(o.createdAt, todayKey));
+    if (todayInitial.some((o) => o.status === "pending")) return "new";
+    if (
+      todayInitial.some(
+        (o) =>
+          o.status === "confirmed" ||
+          o.status === "preparing" ||
+          o.status === "ready" ||
+          o.status === "out_for_delivery"
+      )
+    ) {
+      return "pending";
+    }
+    return "all";
+  });
+
   const [updating, setUpdating] = useState<string | null>(null);
   const [lastPing, setLastPing] = useState<Date>(new Date());
   const [connected, setConnected] = useState(false);
@@ -375,6 +488,20 @@ export default function OrdersClient({
   useEffect(() => {
     soundEnabledRef.current = soundEnabled;
   }, [soundEnabled]);
+
+  const persistHiddenIds = useCallback((nextIds: string[]) => {
+    setHiddenOrderIds(nextIds);
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem(
+          HIDDEN_PAST_ORDERS_STORAGE_KEY,
+          JSON.stringify(nextIds)
+        );
+      } catch {
+        // Ignore storage quota errors
+      }
+    }
+  }, []);
 
   // ── SSE connection ─────────────────────────────────────────
   useEffect(() => {
@@ -391,12 +518,14 @@ export default function OrdersClient({
       );
       setLastPing(new Date());
 
-      // Auto-switch section to show the incoming order if user is on the other section
+      // Switch to Today's Orders + appropriate section & "New Orders" tab on incoming order
+      setTimePeriod("today");
       if (order.orderType === "dine_in") {
         setSection("dine_in");
       } else {
         setSection("online");
       }
+      setSystematicTab("new");
 
       if (soundEnabledRef.current) {
         playOrderChime("new_order");
@@ -417,6 +546,19 @@ export default function OrdersClient({
     es.addEventListener("order_updated", (e) => {
       const updated: Order = JSON.parse(e.data);
       setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+      setLastPing(new Date());
+    });
+
+    es.addEventListener("order_deleted", (e) => {
+      const data: { id: string } = JSON.parse(e.data);
+      setOrders((prev) => prev.filter((o) => o.id !== data.id));
+      setLastPing(new Date());
+    });
+
+    es.addEventListener("orders_bulk_deleted", (e) => {
+      const data: { deletedIds: string[] } = JSON.parse(e.data);
+      const idSet = new Set(data.deletedIds || []);
+      setOrders((prev) => prev.filter((o) => !idSet.has(o.id)));
       setLastPing(new Date());
     });
 
@@ -444,7 +586,9 @@ export default function OrdersClient({
         })
       );
       setLastPing(new Date());
+      setTimePeriod("today");
       setSection("dine_in");
+      setSystematicTab("pending");
 
       if (soundEnabledRef.current) {
         playOrderChime("bill_generated");
@@ -565,6 +709,86 @@ export default function OrdersClient({
     }
   }, []);
 
+  // ── Admin Hide / Delete Past Orders (Except Today's) ───────
+  const handleToggleHidePastOrder = (orderId: string) => {
+    if (hiddenOrderIds.includes(orderId)) {
+      persistHiddenIds(hiddenOrderIds.filter((id) => id !== orderId));
+      setPastActionFeedback("👁️ Past order unhidden.");
+    } else {
+      persistHiddenIds([...hiddenOrderIds, orderId]);
+      setPastActionFeedback("🙈 Past order hidden from view.");
+    }
+    setTimeout(() => setPastActionFeedback(null), 3000);
+  };
+
+  const handleHideAllPastOrders = (pastIds: string[]) => {
+    const merged = Array.from(new Set([...hiddenOrderIds, ...pastIds]));
+    persistHiddenIds(merged);
+    setPastActionFeedback(`🙈 Hidden ${pastIds.length} past orders from view.`);
+    setTimeout(() => setPastActionFeedback(null), 3500);
+  };
+
+  const handleUnhideAllPastOrders = () => {
+    persistHiddenIds([]);
+    setShowHiddenPastOrders(false);
+    setPastActionFeedback("👁️ Restored all hidden past orders.");
+    setTimeout(() => setPastActionFeedback(null), 3500);
+  };
+
+  const handleDeletePastOrder = async (order: Order) => {
+    const ok = window.confirm(
+      `Delete past order #${order.displayId} (${paise2rupee(
+        order.totalPaise
+      )}) permanently? Today's orders are never affected.`
+    );
+    if (!ok) return;
+
+    setUpdating(order.id);
+    try {
+      const res = await fetch(`/api/dashboard/orders/${order.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setPastActionFeedback(`⚠️ ${data.error ?? "Could not delete order"}`);
+        return;
+      }
+      setOrders((prev) => prev.filter((o) => o.id !== order.id));
+      setPastActionFeedback(`🗑️ Deleted past order #${order.displayId}.`);
+      setTimeout(() => setPastActionFeedback(null), 3500);
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const handleBulkDeleteAllPastOrders = async (pastCount: number) => {
+    const ok = window.confirm(
+      `Are you sure you want to permanently DELETE all ${pastCount} past orders from before today? (Today's live orders are strictly protected and will NOT be deleted.)`
+    );
+    if (!ok) return;
+
+    setBulkDeletingPast(true);
+    try {
+      const res = await fetch("/api/dashboard/orders/past", {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setPastActionFeedback(`⚠️ ${data.error ?? "Failed to delete past orders"}`);
+        return;
+      }
+      const deletedIds = new Set<string>(data.deletedIds || []);
+      setOrders((prev) => prev.filter((o) => !deletedIds.has(o.id)));
+      persistHiddenIds([]);
+      setPastActionFeedback(
+        `🗑️ Deleted ${data.deletedCount ?? pastCount} past orders. Today's orders remain untouched.`
+      );
+      setTimeout(() => setPastActionFeedback(null), 4000);
+    } finally {
+      setBulkDeletingPast(false);
+    }
+  };
+
   // ── Request notification permission & test sound ───────────
   const handleToggleSound = () => {
     const next = !soundEnabled;
@@ -656,9 +880,27 @@ export default function OrdersClient({
     }
   };
 
-  // ── Partition orders into 2 sections: Online vs Dine-In ────
-  const onlineOrders = orders.filter((o) => o.orderType !== "dine_in");
-  const dineInOrders = orders.filter((o) => o.orderType === "dine_in");
+  // ── Step 1: Split Orders into Today's Orders vs Past Week / Earlier Orders (IST) ──
+  const todayIstKey = getIstDateKey(new Date());
+  const allTodayOrders = orders.filter((o) => isOrderFromTodayIst(o.createdAt, todayIstKey));
+  const allPastOrdersRaw = orders.filter((o) => !isOrderFromTodayIst(o.createdAt, todayIstKey));
+
+  const hiddenPastOrdersCount = allPastOrdersRaw.filter((o) =>
+    hiddenOrderIds.includes(o.id)
+  ).length;
+
+  const visiblePastOrders = showHiddenPastOrders
+    ? allPastOrdersRaw
+    : allPastOrdersRaw.filter((o) => !hiddenOrderIds.includes(o.id));
+
+  const periodOrders = timePeriod === "today" ? allTodayOrders : visiblePastOrders;
+
+  const todayActionCount = allTodayOrders.filter(
+    (o) =>
+      o.status === "pending" ||
+      (o.orderType === "dine_in" && o.status === "out_for_delivery")
+  ).length;
+
   const pendingRefundCount = orders.filter(
     (o) =>
       (o.status === "rejected" || o.status === "cancelled") &&
@@ -666,37 +908,35 @@ export default function OrdersClient({
       o.paymentStatus !== "refunded"
   ).length;
 
+  // ── Step 2: Partition current time-period orders into Online vs Dine-In ──
+  const onlineOrders = periodOrders.filter((o) => o.orderType !== "dine_in");
+  const dineInOrders = periodOrders.filter((o) => o.orderType === "dine_in");
+
   const onlineActionCount = onlineOrders.filter((o) => o.status === "pending").length;
   const dineInActionCount = dineInOrders.filter(
     (o) => o.status === "pending" || o.status === "out_for_delivery"
   ).length;
 
   const activeSectionOrders = section === "online" ? onlineOrders : dineInOrders;
-  const activeTabs = section === "online" ? onlineTabs : dineInTabs;
+
+  // ── Step 3: Systematic Status Group Counts (New, Pending, Completed, Rejected, All) ──
+  const systematicCounts = activeSectionOrders.reduce(
+    (acc, o) => {
+      const grp = getOrderSystematicGroup(o);
+      acc[grp] = (acc[grp] ?? 0) + 1;
+      acc.all += 1;
+      return acc;
+    },
+    { new: 0, pending: 0, completed: 0, rejected: 0, all: 0 } as Record<
+      SystematicTabKey,
+      number
+    >
+  );
 
   const filtered =
-    filter === "all"
+    systematicTab === "all"
       ? activeSectionOrders
-      : activeSectionOrders.filter((o) => {
-          if (section === "online" && filter === "confirmed") {
-            return o.status === "confirmed" || o.status === "preparing" || o.status === "ready";
-          }
-          if (filter === "rejected") {
-            return o.status === "rejected" || o.status === "cancelled";
-          }
-          return o.status === filter;
-        });
-
-  const counts = activeSectionOrders.reduce((acc, o) => {
-    const key =
-      section === "online" && (o.status === "preparing" || o.status === "ready")
-        ? "confirmed"
-        : o.status === "cancelled"
-        ? "rejected"
-        : o.status;
-    acc[key] = (acc[key] ?? 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+      : activeSectionOrders.filter((o) => getOrderSystematicGroup(o) === systematicTab);
 
   return (
     <div className={styles.page}>
@@ -704,7 +944,7 @@ export default function OrdersClient({
       <div className={styles.pageHeader}>
         <div>
           <h1 className={styles.pageTitle}>
-            {userRole === "chef" ? "👨‍🍳 Kitchen Order Board" : "Live Orders"}
+            {userRole === "chef" ? "👨‍🍳 Kitchen Order Board" : "Live Orders Dashboard"}
           </h1>
           <p className={styles.pageSubtitle}>
             <span
@@ -727,7 +967,7 @@ export default function OrdersClient({
                   fontSize: "0.72rem",
                 }}
               >
-                👨‍🍳 Chef Mode: Kitchen Prep &amp; Dish Readiness
+                👨‍🍳 Chef Mode: Systematic Kitchen Prep &amp; Dish Readiness
               </span>
             )}
           </p>
@@ -755,7 +995,7 @@ export default function OrdersClient({
               type="button"
               onClick={() => {
                 setSection("online");
-                setFilter("rejected");
+                setSystematicTab("rejected");
               }}
               style={{
                 padding: "0.4rem 0.85rem",
@@ -784,7 +1024,7 @@ export default function OrdersClient({
             border: storeStatus.isOpenNow
               ? "1.5px solid #10B981"
               : "1.5px solid #EF4444",
-            marginBottom: "1.25rem",
+            marginBottom: "1.1rem",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -927,7 +1167,338 @@ export default function OrdersClient({
         </div>
       )}
 
-      {/* 2 Distinct Sections Switcher: Online Delivery vs Dine-In Table Orders */}
+      {/* ── STEP 1: Primary Time Period Switcher (Today's Orders vs Past Week Orders) ── */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+          gap: "0.75rem",
+          marginBottom: "1rem",
+        }}
+        role="region"
+        aria-label="Order Time Period"
+      >
+        <button
+          type="button"
+          onClick={() => {
+            setTimePeriod("today");
+          }}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "0.95rem 1.15rem",
+            borderRadius: 14,
+            border:
+              timePeriod === "today"
+                ? "2px solid #059669"
+                : "1.5px solid var(--color-border)",
+            background: timePeriod === "today" ? "#ECFDF5" : "var(--color-surface)",
+            cursor: "pointer",
+            textAlign: "left",
+            transition: "all 0.15s ease",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <span
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                background: timePeriod === "today" ? "#059669" : "#F3F4F6",
+                color: timePeriod === "today" ? "#FFFFFF" : "#374151",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Calendar size={20} />
+            </span>
+            <div>
+              <div
+                style={{
+                  fontSize: "0.95rem",
+                  fontWeight: 900,
+                  color: timePeriod === "today" ? "#065F46" : "var(--color-text)",
+                }}
+              >
+                📅 Today&apos;s Orders (Live)
+              </div>
+              <div style={{ fontSize: "0.74rem", color: "var(--color-text-muted)" }}>
+                New Orders ➔ Pending Orders ➔ Completed Orders
+              </div>
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
+            {todayActionCount > 0 && (
+              <span
+                style={{
+                  padding: "0.24rem 0.6rem",
+                  borderRadius: 999,
+                  background: "#DC2626",
+                  color: "#FFFFFF",
+                  fontSize: "0.72rem",
+                  fontWeight: 800,
+                }}
+              >
+                {todayActionCount} Active
+              </span>
+            )}
+            <span
+              style={{
+                padding: "0.26rem 0.65rem",
+                borderRadius: 999,
+                background: timePeriod === "today" ? "#D1FAE5" : "#F3F4F6",
+                color: timePeriod === "today" ? "#065F46" : "#374151",
+                fontSize: "0.76rem",
+                fontWeight: 800,
+              }}
+            >
+              {allTodayOrders.length} Today
+            </span>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setTimePeriod("past_week");
+            setSystematicTab("all");
+          }}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "0.95rem 1.15rem",
+            borderRadius: 14,
+            border:
+              timePeriod === "past_week"
+                ? "2px solid #7C3AED"
+                : "1.5px solid var(--color-border)",
+            background: timePeriod === "past_week" ? "#F5F3FF" : "var(--color-surface)",
+            cursor: "pointer",
+            textAlign: "left",
+            transition: "all 0.15s ease",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <span
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                background: timePeriod === "past_week" ? "#7C3AED" : "#F3F4F6",
+                color: timePeriod === "past_week" ? "#FFFFFF" : "#374151",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <History size={20} />
+            </span>
+            <div>
+              <div
+                style={{
+                  fontSize: "0.95rem",
+                  fontWeight: 900,
+                  color: timePeriod === "past_week" ? "#5B21B6" : "var(--color-text)",
+                }}
+              >
+                🗓️ Past Week / Earlier Orders
+              </div>
+              <div style={{ fontSize: "0.74rem", color: "var(--color-text-muted)" }}>
+                {userRole === "owner"
+                  ? "Archive history · Admin can Hide or Delete past orders"
+                  : "Previous days order history"}
+              </div>
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
+            <span
+              style={{
+                padding: "0.26rem 0.65rem",
+                borderRadius: 999,
+                background: timePeriod === "past_week" ? "#EDE9FE" : "#F3F4F6",
+                color: timePeriod === "past_week" ? "#5B21B6" : "#374151",
+                fontSize: "0.76rem",
+                fontWeight: 800,
+              }}
+            >
+              {visiblePastOrders.length} Past
+            </span>
+          </div>
+        </button>
+      </div>
+
+      {/* ── Admin Past Orders Management Bar (Only on Past Week Tab; Today's Orders Protected) ── */}
+      {timePeriod === "today" ? (
+        <div
+          style={{
+            padding: "0.55rem 0.95rem",
+            borderRadius: 10,
+            background: "#F8FAFC",
+            border: "1px solid #E2E8F0",
+            marginBottom: "0.95rem",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "0.5rem",
+            fontSize: "0.76rem",
+            color: "#475569",
+          }}
+        >
+          <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", fontWeight: 700 }}>
+            <ShieldCheck size={15} color="#059669" />
+            Viewing <strong>Today&apos;s Orders ({todayIstKey})</strong> — organized systematically into{" "}
+            <strong>New Orders</strong>, <strong>Pending Orders</strong>, and{" "}
+            <strong>Completed Orders</strong>.
+          </span>
+          {userRole === "owner" && (
+            <span style={{ fontSize: "0.72rem", color: "#64748B", fontWeight: 600 }}>
+              🔒 Today&apos;s live orders are protected from deletion (switch to{" "}
+              <strong>Past Week Orders</strong> to hide or delete older records).
+            </span>
+          )}
+        </div>
+      ) : (
+        <div
+          style={{
+            padding: "0.85rem 1.05rem",
+            borderRadius: 12,
+            background: "#F5F3FF",
+            border: "1.5px solid #C4B5FD",
+            marginBottom: "1rem",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "0.75rem",
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
+            <span style={{ fontSize: "0.84rem", fontWeight: 800, color: "#4C1D95" }}>
+              🗓️ Past Week &amp; Earlier Orders Archive ({allPastOrdersRaw.length} total before today)
+            </span>
+            <span style={{ fontSize: "0.74rem", color: "#6D28D9" }}>
+              {userRole === "owner"
+                ? "As Admin (Owner), you can hide or permanently delete past orders here. Today's orders are strictly protected."
+                : "Viewing orders placed before today."}
+            </span>
+            {pastActionFeedback && (
+              <span
+                style={{
+                  marginTop: 4,
+                  fontSize: "0.76rem",
+                  fontWeight: 800,
+                  color: "#047857",
+                }}
+              >
+                {pastActionFeedback}
+              </span>
+            )}
+          </div>
+
+          {userRole === "owner" && (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", flexWrap: "wrap" }}>
+              {hiddenPastOrdersCount > 0 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setShowHiddenPastOrders((v) => !v)}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.3rem",
+                      padding: "0.4rem 0.7rem",
+                      borderRadius: 8,
+                      border: "1px solid #8B5CF6",
+                      background: "#FFFFFF",
+                      color: "#5B21B6",
+                      fontSize: "0.74rem",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <Eye size={14} />
+                    {showHiddenPastOrders
+                      ? "Hide Hidden Orders"
+                      : `Show Hidden (${hiddenPastOrdersCount})`}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleUnhideAllPastOrders}
+                    style={{
+                      padding: "0.4rem 0.7rem",
+                      borderRadius: 8,
+                      border: "1px solid #10B981",
+                      background: "#ECFDF5",
+                      color: "#047857",
+                      fontSize: "0.74rem",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Unhide All
+                  </button>
+                </>
+              )}
+
+              {visiblePastOrders.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleHideAllPastOrders(visiblePastOrders.map((o) => o.id))
+                  }
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.3rem",
+                    padding: "0.4rem 0.75rem",
+                    borderRadius: 8,
+                    border: "1px solid #6B7280",
+                    background: "#FFFFFF",
+                    color: "#374151",
+                    fontSize: "0.74rem",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                  }}
+                >
+                  <EyeOff size={14} /> Hide All Past Orders
+                </button>
+              )}
+
+              {allPastOrdersRaw.length > 0 && (
+                <button
+                  type="button"
+                  disabled={bulkDeletingPast}
+                  onClick={() => handleBulkDeleteAllPastOrders(allPastOrdersRaw.length)}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.3rem",
+                    padding: "0.4rem 0.8rem",
+                    borderRadius: 8,
+                    border: "none",
+                    background: "#DC2626",
+                    color: "#FFFFFF",
+                    fontSize: "0.74rem",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                  }}
+                >
+                  <Trash2 size={14} />
+                  {bulkDeletingPast
+                    ? "Deleting…"
+                    : `Delete All Past Orders (${allPastOrdersRaw.length})`}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── STEP 2: 2 Distinct Sections Switcher (Online Delivery vs Dine-In Table Orders) ── */}
       <div className={styles.sectionSwitcher} role="region" aria-label="Order Sections">
         <button
           type="button"
@@ -936,7 +1507,6 @@ export default function OrdersClient({
           }`}
           onClick={() => {
             setSection("online");
-            setFilter("all");
           }}
         >
           <div className={styles.sectionBtnLeft}>
@@ -944,7 +1514,7 @@ export default function OrdersClient({
             <div>
               <span className={styles.sectionTitle}>Online &amp; Delivery Orders</span>
               <span className={styles.sectionDesc}>
-                Order Placed ➔ Out for Delivery ➔ Delivered
+                New ➔ Pending (Cooking / Out for Delivery) ➔ Completed (Delivered)
               </span>
             </div>
           </div>
@@ -952,7 +1522,9 @@ export default function OrdersClient({
             {onlineActionCount > 0 && (
               <span className={styles.sectionAlertBadge}>{onlineActionCount} New</span>
             )}
-            <span className={styles.sectionCountBadge}>{onlineOrders.length} Total</span>
+            <span className={styles.sectionCountBadge}>
+              {onlineOrders.length} {timePeriod === "today" ? "Today" : "Past"}
+            </span>
           </div>
         </button>
 
@@ -963,7 +1535,6 @@ export default function OrdersClient({
           }`}
           onClick={() => {
             setSection("dine_in");
-            setFilter("all");
           }}
         >
           <div className={styles.sectionBtnLeft}>
@@ -971,7 +1542,7 @@ export default function OrdersClient({
             <div>
               <span className={styles.sectionTitle}>Dine-In Table Orders (QR)</span>
               <span className={styles.sectionDesc}>
-                Accepted ➔ Ready ➔ Final Bill Generated ➔ Paid at Counter
+                New ➔ Pending (Accepted / Ready / Final Bill) ➔ Completed (Paid at Counter)
               </span>
             </div>
           </div>
@@ -979,39 +1550,81 @@ export default function OrdersClient({
             {dineInActionCount > 0 && (
               <span className={styles.sectionAlertBadge}>{dineInActionCount} Action</span>
             )}
-            <span className={styles.sectionCountBadge}>{dineInOrders.length} Total</span>
+            <span className={styles.sectionCountBadge}>
+              {dineInOrders.length} {timePeriod === "today" ? "Today" : "Past"}
+            </span>
           </div>
         </button>
       </div>
 
-      {/* Status Tabs for Active Section */}
-      <div className={styles.tabs} role="tablist">
-        {activeTabs.map((t) => (
-          <button
-            key={t.key}
-            role="tab"
-            aria-selected={filter === t.key}
-            className={`${styles.tab} ${filter === t.key ? styles.tabActive : ""}`}
-            onClick={() => setFilter(t.key)}
-          >
-            {t.label}
-            {t.key !== "all" && counts[t.key] ? (
-              <span className={styles.tabBadge}>{counts[t.key]}</span>
-            ) : t.key === "all" ? (
-              <span className={styles.tabBadge}>{activeSectionOrders.length}</span>
-            ) : null}
-          </button>
-        ))}
+      {/* ── STEP 3: Systematic Status Sub-Tabs (New Orders, Pending Orders, Completed Orders, Rejected, All) ── */}
+      <div className={styles.tabs} role="tablist" aria-label="Systematic Order Statuses">
+        {SYSTEMATIC_TABS.map((t) => {
+          const count = systematicCounts[t.key] ?? 0;
+          const isActive = systematicTab === t.key;
+          return (
+            <button
+              key={t.key}
+              role="tab"
+              aria-selected={isActive}
+              className={`${styles.tab} ${isActive ? styles.tabActive : ""}`}
+              onClick={() => setSystematicTab(t.key)}
+              title={section === "dine_in" ? t.dineInDesc : t.onlineDesc}
+            >
+              <span>{t.label}</span>
+              <span
+                className={styles.tabBadge}
+                style={
+                  t.key === "new" && count > 0 && !isActive
+                    ? { background: "#DC2626", color: "#FFFFFF" }
+                    : undefined
+                }
+              >
+                {count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Order Cards */}
       {filtered.length === 0 ? (
         <div className={styles.empty}>
           <span className={styles.emptyEmoji}>{section === "dine_in" ? "🪑" : "🛵"}</span>
-          <p>
-            No {filter === "all" ? "" : filter.replace(/_/g, " ")}{" "}
-            {section === "dine_in" ? "Dine-In Table" : "Online Delivery"} orders
+          <p style={{ fontWeight: 700 }}>
+            No{" "}
+            {systematicTab === "new"
+              ? "New"
+              : systematicTab === "pending"
+              ? "Pending / In-Progress"
+              : systematicTab === "completed"
+              ? "Completed"
+              : systematicTab === "rejected"
+              ? "Rejected"
+              : ""}{" "}
+            {section === "dine_in" ? "Dine-In Table" : "Online Delivery"} orders in{" "}
+            {timePeriod === "today" ? "Today's Orders" : "Past Week Orders"}.
           </p>
+          {timePeriod === "today" && systematicTab !== "all" && activeSectionOrders.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setSystematicTab("all")}
+              style={{
+                marginTop: "0.65rem",
+                padding: "0.45rem 0.95rem",
+                borderRadius: 999,
+                border: "1.5px solid var(--color-primary)",
+                background: "#FFFBEB",
+                color: "#92400E",
+                fontSize: "0.78rem",
+                fontWeight: 800,
+                cursor: "pointer",
+              }}
+            >
+              View All {activeSectionOrders.length} Today&apos;s{" "}
+              {section === "dine_in" ? "Dine-In" : "Online"} Orders
+            </button>
+          )}
         </div>
       ) : (
         <div className={styles.orderGrid}>
@@ -1021,6 +1634,8 @@ export default function OrdersClient({
             const nextAction = getNextAction(order, userRole);
             const isUpdating = updating === order.id;
             const payBadge = getPaymentBadge(order);
+            const isTodayOrder = isOrderFromTodayIst(order.createdAt, todayIstKey);
+            const isHiddenOrder = hiddenOrderIds.includes(order.id);
 
             return (
               <div
@@ -1031,6 +1646,7 @@ export default function OrdersClient({
                     ? styles.orderCardNew
                     : ""
                 }`}
+                style={isHiddenOrder ? { opacity: 0.68 } : undefined}
               >
                 {/* Top row */}
                 <div className={styles.orderCardHeader}>
@@ -1191,74 +1807,74 @@ export default function OrdersClient({
                         {order.status !== "delivered" &&
                           userRole !== "chef" &&
                           riders.length > 0 && (
-                          <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
-                            <select
-                              aria-label="Select Delivery Rider"
-                              value={
-                                selectedRiders[order.id] ??
-                                order.riderId ??
-                                riders[0]?.id ??
-                                ""
-                              }
-                              onChange={(e) =>
-                                setSelectedRiders((prev) => ({
-                                  ...prev,
-                                  [order.id]: e.target.value,
-                                }))
-                              }
-                              style={{
-                                flex: 1,
-                                padding: "0.35rem 0.5rem",
-                                borderRadius: 7,
-                                border: "1px solid var(--color-border)",
-                                fontSize: "0.76rem",
-                                fontWeight: 600,
-                                background: "#fff",
-                              }}
-                            >
-                              {riders.map((r) => {
-                                const activeCount = orders.filter(
-                                  (o) =>
-                                    o.riderId === r.id &&
-                                    !["delivered", "cancelled", "rejected"].includes(o.status)
-                                ).length;
-                                return (
-                                  <option key={r.id} value={r.id}>
-                                    {r.name} ({activeCount} active)
-                                  </option>
-                                );
-                              })}
-                            </select>
-                            <button
-                              type="button"
-                              disabled={isUpdating}
-                              onClick={() => {
-                                const chosenId =
+                            <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+                              <select
+                                aria-label="Select Delivery Rider"
+                                value={
                                   selectedRiders[order.id] ??
                                   order.riderId ??
-                                  riders[0]?.id;
-                                if (!chosenId) return;
-                                updateOrder(order.id, {
-                                  riderId: chosenId,
-                                  status: "out_for_delivery",
-                                });
-                              }}
-                              style={{
-                                padding: "0.38rem 0.65rem",
-                                borderRadius: 7,
-                                border: "none",
-                                background: "#2563EB",
-                                color: "#fff",
-                                fontSize: "0.74rem",
-                                fontWeight: 800,
-                                cursor: "pointer",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {order.riderId ? "Re-Allot" : "🛵 Allot & Dispatch"}
-                            </button>
-                          </div>
-                        )}
+                                  riders[0]?.id ??
+                                  ""
+                                }
+                                onChange={(e) =>
+                                  setSelectedRiders((prev) => ({
+                                    ...prev,
+                                    [order.id]: e.target.value,
+                                  }))
+                                }
+                                style={{
+                                  flex: 1,
+                                  padding: "0.35rem 0.5rem",
+                                  borderRadius: 7,
+                                  border: "1px solid var(--color-border)",
+                                  fontSize: "0.76rem",
+                                  fontWeight: 600,
+                                  background: "#fff",
+                                }}
+                              >
+                                {riders.map((r) => {
+                                  const activeCount = orders.filter(
+                                    (o) =>
+                                      o.riderId === r.id &&
+                                      !["delivered", "cancelled", "rejected"].includes(o.status)
+                                  ).length;
+                                  return (
+                                    <option key={r.id} value={r.id}>
+                                      {r.name} ({activeCount} active)
+                                    </option>
+                                  );
+                                })}
+                              </select>
+                              <button
+                                type="button"
+                                disabled={isUpdating}
+                                onClick={() => {
+                                  const chosenId =
+                                    selectedRiders[order.id] ??
+                                    order.riderId ??
+                                    riders[0]?.id;
+                                  if (!chosenId) return;
+                                  updateOrder(order.id, {
+                                    riderId: chosenId,
+                                    status: "out_for_delivery",
+                                  });
+                                }}
+                                style={{
+                                  padding: "0.38rem 0.65rem",
+                                  borderRadius: 7,
+                                  border: "none",
+                                  background: "#2563EB",
+                                  color: "#fff",
+                                  fontSize: "0.74rem",
+                                  fontWeight: 800,
+                                  cursor: "pointer",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {order.riderId ? "Re-Allot" : "🛵 Allot & Dispatch"}
+                              </button>
+                            </div>
+                          )}
                       </div>
                     )}
                 </div>
@@ -1299,14 +1915,21 @@ export default function OrdersClient({
                   </span>
                   <span className={styles.orderPrice}>{paise2rupee(order.totalPaise)}</span>
                   <span className={styles.orderTime}>
-                    {new Date(order.createdAt).toLocaleTimeString("en-IN", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {isTodayOrder
+                      ? new Date(order.createdAt).toLocaleTimeString("en-IN", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : new Date(order.createdAt).toLocaleString("en-IN", {
+                          day: "2-digit",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
                   </span>
                 </div>
 
-                {/* Primary Staff Action Button */}
+                {/* Primary Staff/Chef Action Button */}
                 {nextAction && (
                   <button
                     className={styles.advanceBtn}
@@ -1363,7 +1986,8 @@ export default function OrdersClient({
                         cursor: "pointer",
                       }}
                     >
-                      🧾 Generate Final Table Bill Now ({paise2rupee(order.sessionTotalPaise || order.totalPaise)})
+                      🧾 Generate Final Table Bill Now (
+                      {paise2rupee(order.sessionTotalPaise || order.totalPaise)})
                     </button>
                   </div>
                 )}
@@ -1524,6 +2148,68 @@ export default function OrdersClient({
                       )}
                     </div>
                   )}
+
+                {/* ── Admin Hide / Delete Controls for Past Orders ONLY (Never on Today's Orders) ── */}
+                {!isTodayOrder && userRole === "owner" && (
+                  <div
+                    style={{
+                      padding: "0.6rem 1rem",
+                      background: "#F8FAFC",
+                      borderTop: "1px solid var(--color-border)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    <span style={{ fontSize: "0.7rem", color: "#64748B", fontWeight: 700 }}>
+                      🗓️ Past Order ({getIstDateKey(order.createdAt)})
+                    </span>
+                    <div style={{ display: "flex", gap: "0.4rem" }}>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleHidePastOrder(order.id)}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "0.25rem",
+                          padding: "0.28rem 0.6rem",
+                          borderRadius: 6,
+                          border: "1px solid #CBD5E1",
+                          background: "#FFFFFF",
+                          color: "#334155",
+                          fontSize: "0.72rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {isHiddenOrder ? <Eye size={12} /> : <EyeOff size={12} />}
+                        {isHiddenOrder ? "Unhide" : "Hide"}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isUpdating}
+                        onClick={() => handleDeletePastOrder(order)}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "0.25rem",
+                          padding: "0.28rem 0.6rem",
+                          borderRadius: 6,
+                          border: "1px solid #FECACA",
+                          background: "#FEF2F2",
+                          color: "#DC2626",
+                          fontSize: "0.72rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                        }}
+                      >
+                        <Trash2 size={12} />
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
