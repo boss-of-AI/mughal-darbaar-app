@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { orders, menuItems } from "@/lib/db/schema";
 import { eq, gte, sql, count } from "drizzle-orm";
 import { restaurantConfig } from "@/config/restaurant.config";
+import { getTodayIstStart } from "@/lib/store-hours";
 import {
   ShoppingBag, IndianRupee, TrendingUp, Clock, ChevronRight
 } from "lucide-react";
@@ -17,8 +18,15 @@ export const dynamic = "force-dynamic";
 const paise2rupee = (p: number) => `₹${(p / 100).toLocaleString("en-IN")}`;
 
 function greeting(name?: string | null) {
-  const h = new Date().getHours();
-  const t = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+  const istHour =
+    Number(
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: "Asia/Kolkata",
+        hour: "2-digit",
+        hour12: false,
+      }).format(new Date())
+    ) % 24;
+  const t = istHour < 12 ? "Good morning" : istHour < 17 ? "Good afternoon" : "Good evening";
   return `${t}${name ? `, ${name.split(" ")[0]}` : ""}!`;
 }
 
@@ -43,8 +51,7 @@ export default async function DashboardPage() {
   let totalMenuItems = 0;
 
   try {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
+    const todayStart = getTodayIstStart();
 
     const [todayRows, pendingCount, recent, menuCount] = await Promise.all([
       db

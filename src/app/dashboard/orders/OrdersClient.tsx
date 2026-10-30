@@ -24,7 +24,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import type { DashboardOrderPayload } from "@/lib/sse";
-import type { StoreAvailabilityResult } from "@/lib/store-hours";
+import { getIstDateKey, type StoreAvailabilityResult } from "@/lib/store-hours";
 import styles from "./orders.module.css";
 
 // ── Types ─────────────────────────────────────────────────────
@@ -41,23 +41,6 @@ type TimePeriodTab = "today" | "past_week";
 type SystematicTabKey = "new" | "pending" | "completed" | "rejected" | "all";
 
 const HIDDEN_PAST_ORDERS_STORAGE_KEY = "mughal_darbaar_hidden_past_orders_v1";
-
-/**
- * Returns YYYY-MM-DD in Asia/Kolkata (IST) so client and server agree on Today vs Past Orders.
- */
-function getIstDateKey(dateInput: Date | string): string {
-  try {
-    const d = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
-    return new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Kolkata",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(d);
-  } catch {
-    return "";
-  }
-}
 
 function isOrderFromTodayIst(createdAtIso: string, todayKey: string): boolean {
   return getIstDateKey(createdAtIso) === todayKey;

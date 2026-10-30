@@ -81,10 +81,36 @@ export function formatTime12h(hhmm: string): string {
   return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
 }
 
-function toMinutes(hhmm: string): number {
+export function toMinutes(hhmm: string): number {
   const [h, m] = hhmm.split(":").map(Number);
   if (Number.isNaN(h) || Number.isNaN(m)) return 0;
   return h * 60 + m;
+}
+
+/**
+ * Returns the YYYY-MM-DD date string in Asia/Kolkata (IST) timezone.
+ * Used across server and client to consistently classify Today's Orders vs Past Orders.
+ */
+export function getIstDateKey(dateInput: Date | string = new Date()): string {
+  try {
+    const d = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(d);
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Returns a Date representing 00:00:00.000 of the current day in Asia/Kolkata (IST).
+ */
+export function getTodayIstStart(now: Date = new Date()): Date {
+  const istKey = getIstDateKey(now);
+  return new Date(`${istKey}T00:00:00.000+05:30`);
 }
 
 export interface StoreAvailabilityResult {

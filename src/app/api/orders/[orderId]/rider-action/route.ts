@@ -60,6 +60,18 @@ export async function POST(
         }
       : {};
 
+  // Only set paymentStatus to "paid" when the rider explicitly collects cash or when the order was already paid online.
+  // Never overwrite "refunded" if the order was refunded.
+  const nextPaymentStatus =
+    existing.paymentStatus === "refunded"
+      ? "refunded"
+      : action === "cash_collected" ||
+        existing.paymentStatus === "paid" ||
+        existing.paymentMethod === "cash_on_delivery" ||
+        existing.paymentMethod === "pay_at_counter"
+      ? "paid"
+      : existing.paymentStatus;
+
   if (action === "reached") {
     await db
       .update(orders)
@@ -84,7 +96,7 @@ export async function POST(
     .update(orders)
     .set({
       ...autoAssignRider,
-      paymentStatus: "paid",
+      paymentStatus: nextPaymentStatus,
       status: "delivered",
       deliveredAt: now,
       riderReachedAt: existing.riderReachedAt ?? now,

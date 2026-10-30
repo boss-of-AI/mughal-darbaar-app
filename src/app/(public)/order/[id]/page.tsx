@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { eq, asc, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { orderItems, orders, restaurantTables, tableSessions } from "@/lib/db/schema";
+import { isOrderRefundEligible } from "@/lib/sse";
 import AutoRefresh from "./AutoRefresh";
 import AcceptDeliveryButton from "./AcceptDeliveryButton";
 import GenerateBillButton from "./GenerateBillButton";
@@ -176,14 +177,14 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
 
   if (order.status === "rejected") {
     bannerText = "Sorry — the restaurant couldn't accept this order.";
-    bannerBg = "rgba(248, 113, 113, 0.10)";
+    bannerBg = "rgba(248, 113, 113, 0.14)";
     bannerBorder = "#EF4444";
-    bannerColor = "#991B1B";
+    bannerColor = "#FCA5A5";
   } else if (order.status === "cancelled") {
     bannerText = "This order was cancelled.";
-    bannerBg = "rgba(248, 113, 113, 0.10)";
+    bannerBg = "rgba(248, 113, 113, 0.14)";
     bannerBorder = "#EF4444";
-    bannerColor = "#991B1B";
+    bannerColor = "#FCA5A5";
   } else if (isDineIn) {
     if (stageIdx === 0) {
       bannerText = `Order Sent to Kitchen (${tableName || "Dine-In"}) — Waiting for staff to accept your order…`;
@@ -193,9 +194,9 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
     } else if (stageIdx === 1) {
       bannerText =
         "Order Accepted! 👨‍🍳 Our kitchen is preparing your dishes fresh for your table.";
-      bannerBg = "rgba(96, 165, 250, 0.10)";
+      bannerBg = "rgba(96, 165, 250, 0.14)";
       bannerBorder = "#3B82F6";
-      bannerColor = "#1E40AF";
+      bannerColor = "#93C5FD";
     } else if (stageIdx === 2) {
       bannerText =
         "Order Is Ready! 🍽️ Enjoy your meal! You can order more items anytime, or tap 'Generate Final Total Bill' when you finish.";
@@ -227,9 +228,9 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
       bannerColor = "#FCD34D";
     } else if (stageIdx === 1) {
       bannerText = "Order Placed! 👨‍🍳 Our chef has accepted your order and is preparing it fresh.";
-      bannerBg = "rgba(96, 165, 250, 0.10)";
+      bannerBg = "rgba(96, 165, 250, 0.14)";
       bannerBorder = "#3B82F6";
-      bannerColor = "#1E40AF";
+      bannerColor = "#93C5FD";
     } else if (stageIdx === 2) {
       if (order.riderReachedAt) {
         bannerText = `📍 Your Rider (${order.riderName || "Delivery Partner"}) has REACHED your location! ${
@@ -267,9 +268,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
       ["confirmed", "preparing", "ready", "out_for_delivery"].includes(so.status)
     );
 
-  const isRefundEligible =
-    (order.status === "rejected" || order.status === "cancelled") &&
-    (order.paymentStatus === "paid" || order.paymentStatus === "refunded");
+  const isRefundEligible = isOrderRefundEligible(order);
 
   return (
     <main style={{ maxWidth: 640, margin: "0 auto", padding: "6rem 1rem 4rem" }}>

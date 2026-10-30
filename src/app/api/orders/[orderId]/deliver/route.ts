@@ -39,11 +39,20 @@ export async function POST(
   }
 
   const now = new Date();
+  const nextPaymentStatus =
+    existing.paymentStatus === "refunded"
+      ? "refunded"
+      : existing.paymentMethod === "cash_on_delivery" ||
+        existing.paymentMethod === "pay_at_counter" ||
+        existing.paymentStatus === "paid"
+      ? "paid"
+      : existing.paymentStatus;
+
   await db
     .update(orders)
     .set({
       status: "delivered",
-      paymentStatus: "paid",
+      paymentStatus: nextPaymentStatus,
       deliveredAt: now,
       updatedAt: now,
     })
@@ -54,5 +63,5 @@ export async function POST(
     pushOrderEvent("order_updated", payload);
   }
 
-  return NextResponse.json({ ok: true, status: "delivered", paymentStatus: "paid" });
+  return NextResponse.json({ ok: true, status: "delivered", paymentStatus: nextPaymentStatus });
 }

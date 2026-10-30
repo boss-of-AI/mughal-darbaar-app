@@ -229,7 +229,16 @@ export default function ProfileClient() {
           </button>
           <button
             type="button"
-            onClick={() => setTableToken("dine-in-table-1-token")}
+            onClick={async () => {
+              try {
+                const res = await fetch("/api/tables");
+                const data = await res.json();
+                const firstToken = data.tables?.[0]?.qrToken || "dine-in-table-1-token";
+                setTableToken(firstToken);
+              } catch {
+                setTableToken("dine-in-table-1-token");
+              }
+            }}
             style={{
               padding: "0.45rem 0.9rem",
               borderRadius: 999,

@@ -40,7 +40,15 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ orders: [] });
     }
 
-    const orderIds = matchedOrders.map((o) => o.id);
+    // Hide abandoned Razorpay checkout drafts that were never paid
+    const visibleOrders = matchedOrders.filter(
+      (o) => !(o.paymentMethod === "razorpay" && o.paymentStatus === "pending")
+    );
+    if (visibleOrders.length === 0) {
+      return NextResponse.json({ orders: [] });
+    }
+
+    const orderIds = visibleOrders.map((o) => o.id);
     const [allItems, allTables] = await Promise.all([
       db.select().from(orderItems).where(inArray(orderItems.orderId, orderIds)),
       db
@@ -50,7 +58,7 @@ export async function GET(req: NextRequest) {
 
     const tableMap = new Map(allTables.map((t) => [t.id, t.name]));
 
-    const result = matchedOrders.map((o) => ({
+    const result = visibleOrders.map((o) => ({
       id: o.id,
       orderNumber: o.orderNumber,
       serviceMode: o.serviceMode,

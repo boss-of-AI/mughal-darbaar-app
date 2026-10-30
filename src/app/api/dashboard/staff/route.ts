@@ -33,9 +33,6 @@ export async function POST(req: NextRequest) {
   }
 
   const { name, email, phone, password, role } = parsed.data;
-  if (session.user.role !== "owner" && role === "owner") {
-    return NextResponse.json({ error: "Only owners can create another owner account" }, { status: 403 });
-  }
   if (role === "rider" && (!phone || phone.replace(/\D/g, "").length < 10)) {
     return NextResponse.json(
       { error: "A valid 10-digit mobile number is required for Delivery Riders" },

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "crypto";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, notInArray } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { restaurantTables, tableSessions } from "@/lib/db/schema";
+import { orders, restaurantTables, tableSessions } from "@/lib/db/schema";
+import { buildDashboardOrderPayload, pushOrderEvent } from "@/lib/sse";
 
 const patchTableSchema = z.object({
   name: z.string().trim().min(1).max(60).optional(),
@@ -41,10 +42,50 @@ export async function PATCH(
 
   try {
     if (closeSession) {
+      const now = new Date();
+      const openSessions = await db
+        .select({ id: tableSessions.id })
+        .from(tableSessions)
+        .where(and(eq(tableSessions.tableId, tableId), eq(tableSessions.status, "open")));
+
+      const openSessionIds = openSessions.map((s) => s.id);
+
       await db
         .update(tableSessions)
-        .set({ status: "closed", closedAt: new Date() })
+        .set({ status: "closed", closedAt: now, notes: "paid_and_closed" })
         .where(and(eq(tableSessions.tableId, tableId), eq(tableSessions.status, "open")));
+
+      if (openSessionIds.length > 0) {
+        const affectedOrders = await db
+          .select({ id: orders.id })
+          .from(orders)
+          .where(
+            and(
+              inArray(orders.tableSessionId, openSessionIds),
+              notInArray(orders.status, ["cancelled", "rejected"])
+            )
+          );
+
+        await db
+          .update(orders)
+          .set({
+            paymentStatus: "paid",
+            status: "delivered",
+            deliveredAt: now,
+            updatedAt: now,
+          })
+          .where(
+            and(
+              inArray(orders.tableSessionId, openSessionIds),
+              notInArray(orders.status, ["cancelled", "rejected"])
+            )
+          );
+
+        for (const ao of affectedOrders) {
+          const payload = await buildDashboardOrderPayload(ao.id);
+          if (payload) pushOrderEvent("order_updated", payload);
+        }
+      }
     }
 
     const updates: Partial<typeof restaurantTables.$inferInsert> = {

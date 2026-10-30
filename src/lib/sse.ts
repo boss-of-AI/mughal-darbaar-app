@@ -146,12 +146,10 @@ export async function fetchDashboardOrders(options?: {
         totalPaise: i.totalPaise,
       }));
 
-    const normalizedStatus = o.status === "preparing" ? "confirmed" : o.status;
-
     let sessionTotalPaise = o.totalPaise;
     let sessionOrderCount = 1;
     let sessionBillGenerated =
-      normalizedStatus === "out_for_delivery" || normalizedStatus === "delivered";
+      o.status === "out_for_delivery" || o.status === "delivered";
 
     if (o.tableSessionId) {
       const sameSessionOrders = visibleRows.filter(
@@ -176,39 +174,58 @@ export async function fetchDashboardOrders(options?: {
       }
     }
 
-    return {
-      id: o.id,
-      displayId: o.orderNumber,
-      customerName: o.guestName ?? null,
-      customerPhone: o.guestPhone ?? null,
-      orderType: o.serviceMode,
-      status: normalizedStatus,
-      paymentStatus: o.paymentStatus,
-      paymentMethod: o.paymentMethod ?? null,
-      totalPaise: o.totalPaise,
-      discountPaise: o.discountPaise ?? 0,
+    return mapOrderRowToDashboardPayload(o, items, {
       tableName: o.tableId ? tableMap.get(o.tableId) ?? null : null,
-      tableSessionId: o.tableSessionId ?? null,
       sessionTotalPaise,
       sessionOrderCount,
       sessionBillGenerated,
-      createdAt: o.createdAt.toISOString(),
-      itemCount: items.reduce((s, i) => s + i.quantity, 0) || items.length,
-      items,
-      deliveryAddress:
-        (o.deliveryAddress as DashboardOrderPayload["deliveryAddress"]) ?? null,
-      specialInstructions: o.specialInstructions ?? null,
-      riderId: o.riderId ?? null,
-      riderName: o.riderName ?? null,
-      riderPhone: o.riderPhone ?? null,
-      riderReachedAt: o.riderReachedAt ? o.riderReachedAt.toISOString() : null,
-      refundToken: o.refundToken ?? null,
-      refundStatus: o.refundStatus ?? "none",
-      refundRequestedAt: o.refundRequestedAt ? o.refundRequestedAt.toISOString() : null,
-      refundProcessedAt: o.refundProcessedAt ? o.refundProcessedAt.toISOString() : null,
-      refundNote: o.refundNote ?? null,
-    };
+    });
   });
+}
+
+function mapOrderRowToDashboardPayload(
+  o: typeof orders.$inferSelect,
+  items: DashboardOrderItem[],
+  ctx: {
+    tableName: string | null;
+    sessionTotalPaise: number;
+    sessionOrderCount: number;
+    sessionBillGenerated: boolean;
+  }
+): DashboardOrderPayload {
+  const normalizedStatus = o.status === "preparing" ? "confirmed" : o.status;
+  return {
+    id: o.id,
+    displayId: o.orderNumber,
+    customerName: o.guestName ?? null,
+    customerPhone: o.guestPhone ?? null,
+    orderType: o.serviceMode,
+    status: normalizedStatus,
+    paymentStatus: o.paymentStatus,
+    paymentMethod: o.paymentMethod ?? null,
+    totalPaise: o.totalPaise,
+    discountPaise: o.discountPaise ?? 0,
+    tableName: ctx.tableName,
+    tableSessionId: o.tableSessionId ?? null,
+    sessionTotalPaise: ctx.sessionTotalPaise,
+    sessionOrderCount: ctx.sessionOrderCount,
+    sessionBillGenerated: ctx.sessionBillGenerated,
+    createdAt: o.createdAt.toISOString(),
+    itemCount: items.reduce((s, i) => s + i.quantity, 0) || items.length,
+    items,
+    deliveryAddress:
+      (o.deliveryAddress as DashboardOrderPayload["deliveryAddress"]) ?? null,
+    specialInstructions: o.specialInstructions ?? null,
+    riderId: o.riderId ?? null,
+    riderName: o.riderName ?? null,
+    riderPhone: o.riderPhone ?? null,
+    riderReachedAt: o.riderReachedAt ? o.riderReachedAt.toISOString() : null,
+    refundToken: o.refundToken ?? null,
+    refundStatus: o.refundStatus ?? "none",
+    refundRequestedAt: o.refundRequestedAt ? o.refundRequestedAt.toISOString() : null,
+    refundProcessedAt: o.refundProcessedAt ? o.refundProcessedAt.toISOString() : null,
+    refundNote: o.refundNote ?? null,
+  };
 }
 
 export async function buildDashboardOrderPayload(
@@ -238,12 +255,10 @@ export async function buildDashboardOrderPayload(
     tableName = tbl?.name ?? null;
   }
 
-  const normalizedStatus = order.status === "preparing" ? "confirmed" : order.status;
-
   let sessionTotalPaise = order.totalPaise;
   let sessionOrderCount = 1;
   let sessionBillGenerated =
-    normalizedStatus === "out_for_delivery" || normalizedStatus === "delivered";
+    order.status === "out_for_delivery" || order.status === "delivered";
 
   if (order.tableSessionId) {
     const sessionOrders = await db
@@ -278,37 +293,12 @@ export async function buildDashboardOrderPayload(
     }
   }
 
-  return {
-    id: order.id,
-    displayId: order.orderNumber,
-    customerName: order.guestName ?? null,
-    customerPhone: order.guestPhone ?? null,
-    orderType: order.serviceMode,
-    status: normalizedStatus,
-    paymentStatus: order.paymentStatus,
-    paymentMethod: order.paymentMethod ?? null,
-    totalPaise: order.totalPaise,
-    discountPaise: order.discountPaise ?? 0,
+  return mapOrderRowToDashboardPayload(order, items, {
     tableName,
-    tableSessionId: order.tableSessionId ?? null,
     sessionTotalPaise,
     sessionOrderCount,
     sessionBillGenerated,
-    createdAt: order.createdAt.toISOString(),
-    itemCount: items.reduce((s, i) => s + i.quantity, 0) || items.length,
-    items,
-    deliveryAddress: (order.deliveryAddress as DashboardOrderPayload["deliveryAddress"]) ?? null,
-    specialInstructions: order.specialInstructions ?? null,
-    riderId: order.riderId ?? null,
-    riderName: order.riderName ?? null,
-    riderPhone: order.riderPhone ?? null,
-    riderReachedAt: order.riderReachedAt ? order.riderReachedAt.toISOString() : null,
-    refundToken: order.refundToken ?? null,
-    refundStatus: order.refundStatus ?? "none",
-    refundRequestedAt: order.refundRequestedAt ? order.refundRequestedAt.toISOString() : null,
-    refundProcessedAt: order.refundProcessedAt ? order.refundProcessedAt.toISOString() : null,
-    refundNote: order.refundNote ?? null,
-  };
+  });
 }
 
 export function pushOrderEvent(event: string, payload: object) {

@@ -4,15 +4,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { orders, paymentRecords } from "@/lib/db/schema";
 import { pushOrderEvent } from "@/lib/sse";
-
-export function getIstDateKey(d: Date): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Kolkata",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(d);
-}
+import { getIstDateKey } from "@/lib/store-hours";
 
 /**
  * DELETE /api/dashboard/orders/[orderId]

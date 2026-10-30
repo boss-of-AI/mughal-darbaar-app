@@ -103,8 +103,9 @@
 }
 
 .qrInner {
-  padding: var(--space-2);
-  background: var(--color-surface-alt);
+  padding: var(--space-3);
+  background: #FFFFFF; /* intentional: high-contrast white quiet zone for QR code scanners */
+  border-radius: var(--radius-md);
 }
 
 .printBrand {

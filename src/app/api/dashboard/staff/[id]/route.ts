@@ -93,10 +93,31 @@ export async function PATCH(
     }
 
     if (phone !== undefined) {
-      updates.phone = phone ? phone.trim() : null;
+      const trimmedPhone = phone ? phone.trim() : null;
+      const effectiveRole = role !== undefined && isOwner ? role : existing.role;
+      if (effectiveRole === "rider" && (!trimmedPhone || trimmedPhone.replace(/\D/g, "").length < 10)) {
+        return NextResponse.json(
+          { error: "A valid 10-digit mobile number is required for Delivery Riders." },
+          { status: 400 }
+        );
+      }
+      updates.phone = trimmedPhone;
+    } else if (role === "rider" && isOwner) {
+      if (!existing.phone || existing.phone.replace(/\D/g, "").length < 10) {
+        return NextResponse.json(
+          { error: "A valid 10-digit mobile number is required before assigning the Rider role." },
+          { status: 400 }
+        );
+      }
     }
 
     if (role !== undefined && isOwner) {
+      if (id === session.user.id && role !== "owner") {
+        return NextResponse.json(
+          { error: "You cannot demote your own active Owner account." },
+          { status: 400 }
+        );
+      }
       updates.role = role;
     }
 
