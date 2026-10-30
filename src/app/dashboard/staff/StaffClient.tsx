@@ -45,8 +45,8 @@ const ROLE_PROPERTIES: Record<
     title: "Counter Staff / Manager",
     subtitle: "Full Counter Billing, Order Dispatch & Offers",
     portalPath: "/dashboard/orders",
-    color: "#1D4ED8",
-    bg: "#EFF6FF",
+    color: "#93C5FD",
+    bg: "rgba(96, 165, 250, 0.10)",
     border: "#93C5FD",
     phoneRequired: false,
     placeholderName: "Aamir Baig",
@@ -63,8 +63,8 @@ const ROLE_PROPERTIES: Record<
     title: "Kitchen Chef",
     subtitle: "Kitchen Order Preparation & Dish Stock Control",
     portalPath: "/dashboard/orders (Kitchen View)",
-    color: "#B45309",
-    bg: "#FFFBEB",
+    color: "#FBBF24",
+    bg: "rgba(251, 191, 36, 0.10)",
     border: "#FCD34D",
     phoneRequired: false,
     placeholderName: "Ustad Karim",
@@ -82,8 +82,8 @@ const ROLE_PROPERTIES: Record<
     title: "Delivery Rider",
     subtitle: "Rider Navigation, Customer Reached Alert & COD Collection",
     portalPath: "/dashboard/rider",
-    color: "#047857",
-    bg: "#ECFDF5",
+    color: "#34D399",
+    bg: "rgba(52, 211, 153, 0.10)",
     border: "#6EE7B7",
     phoneRequired: true,
     placeholderName: "Imran Khan",
@@ -102,7 +102,7 @@ const ROLE_PROPERTIES: Record<
     subtitle: "Full System Access + Settings & Revenue Reports",
     portalPath: "/dashboard",
     color: "#7C3AED",
-    bg: "#F5F3FF",
+    bg: "rgba(167, 139, 250, 0.10)",
     border: "#C4B5FD",
     phoneRequired: false,
     placeholderName: "Mughal Darbaar Owner",
@@ -304,15 +304,15 @@ export default function StaffClient({ initialStaff }: { initialStaff: StaffMembe
   const getRoleBadgeStyle = (r: StaffMember["role"]) => {
     switch (r) {
       case "rider":
-        return { label: "🛵 RIDER", bg: "#ECFDF5", color: "#047857" };
+        return { label: "🛵 RIDER", bg: "rgba(52, 211, 153, 0.10)", color: "#34D399" };
       case "chef":
-        return { label: "👨‍🍳 CHEF", bg: "#FFFBEB", color: "#B45309" };
+        return { label: "👨‍🍳 CHEF", bg: "rgba(251, 191, 36, 0.10)", color: "#FBBF24" };
       case "staff":
-        return { label: "🧑‍💼 STAFF", bg: "#EFF6FF", color: "#1D4ED8" };
+        return { label: "🧑‍💼 STAFF", bg: "rgba(96, 165, 250, 0.10)", color: "#93C5FD" };
       case "owner":
-        return { label: "👑 OWNER", bg: "#F5F3FF", color: "#7C3AED" };
+        return { label: "👑 OWNER", bg: "rgba(167, 139, 250, 0.10)", color: "#7C3AED" };
       default:
-        return { label: r.toUpperCase(), bg: "#F3F4F6", color: "#374151" };
+        return { label: r.toUpperCase(), bg: "rgba(255, 255, 255, 0.06)", color: "#D1D5DB" };
     }
   };
 
@@ -416,12 +416,12 @@ export default function StaffClient({ initialStaff }: { initialStaff: StaffMembe
                 fontSize: "0.8rem",
                 fontWeight: 700,
                 background:
-                  directoryFeedback.type === "success" ? "#ECFDF5" : "#FEF2F2",
-                color: directoryFeedback.type === "success" ? "#047857" : "#DC2626",
+                  directoryFeedback.type === "success" ? "rgba(52, 211, 153, 0.10)" : "rgba(248, 113, 113, 0.10)",
+                color: directoryFeedback.type === "success" ? "#34D399" : "#DC2626",
                 border:
                   directoryFeedback.type === "success"
                     ? "1px solid #6EE7B7"
-                    : "1px solid #FECACA",
+                    : "1px solid rgba(248, 113, 113, 0.35)",
               }}
             >
               {directoryFeedback.text}
@@ -507,8 +507,8 @@ export default function StaffClient({ initialStaff }: { initialStaff: StaffMembe
                             padding: "0.28rem 0.55rem",
                             borderRadius: 7,
                             border: "1px solid var(--color-border)",
-                            background: isEditing ? "#FEF3C7" : "#FFFFFF",
-                            color: "#1F2937",
+                            background: isEditing ? "rgba(251, 191, 36, 0.16)" : "#FFFFFF",
+                            color: "#E5E7EB",
                             fontSize: "0.72rem",
                             fontWeight: 700,
                             cursor: "pointer",
@@ -529,8 +529,8 @@ export default function StaffClient({ initialStaff }: { initialStaff: StaffMembe
                             gap: "0.25rem",
                             padding: "0.28rem 0.55rem",
                             borderRadius: 7,
-                            border: "1px solid #FECACA",
-                            background: "#FEF2F2",
+                            border: "1px solid rgba(248, 113, 113, 0.35)",
+                            background: "rgba(248, 113, 113, 0.10)",
                             color: "#DC2626",
                             fontSize: "0.72rem",
                             fontWeight: 700,
@@ -550,7 +550,7 @@ export default function StaffClient({ initialStaff }: { initialStaff: StaffMembe
                         style={{
                           padding: "0.85rem",
                           borderRadius: 10,
-                          background: "#FFFFFF",
+                          background: "var(--color-surface-alt)",
                           border: "1.5px solid var(--color-primary)",
                           display: "grid",
                           gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
@@ -709,10 +709,10 @@ export default function StaffClient({ initialStaff }: { initialStaff: StaffMembe
               marginTop: "1rem",
               padding: "0.85rem 1rem",
               borderRadius: 10,
-              background: "#FFFBEB",
-              border: "1px solid #FDE68A",
+              background: "rgba(251, 191, 36, 0.10)",
+              border: "1px solid rgba(251, 191, 36, 0.35)",
               fontSize: "0.78rem",
-              color: "#92400E",
+              color: "#FCD34D",
               display: "flex",
               flexDirection: "column",
               gap: "0.35rem",
@@ -835,7 +835,7 @@ export default function StaffClient({ initialStaff }: { initialStaff: StaffMembe
                   fontWeight: 700,
                   padding: "0.18rem 0.5rem",
                   borderRadius: 6,
-                  background: "rgba(255,255,255,0.8)",
+                  background: "rgba(0,0,0,0.35)",
                   color: selectedConfig.color,
                 }}
               >
@@ -847,7 +847,7 @@ export default function StaffClient({ initialStaff }: { initialStaff: StaffMembe
                 margin: 0,
                 paddingLeft: "1.1rem",
                 fontSize: "0.75rem",
-                color: "#1F2937",
+                color: "#E5E7EB",
                 display: "flex",
                 flexDirection: "column",
                 gap: "0.22rem",
@@ -933,8 +933,8 @@ export default function StaffClient({ initialStaff }: { initialStaff: StaffMembe
               style={{
                 padding: "0.6rem 0.75rem",
                 borderRadius: 8,
-                background: "#ECFDF5",
-                color: "#047857",
+                background: "rgba(52, 211, 153, 0.10)",
+                color: "#34D399",
                 fontSize: "0.8rem",
                 fontWeight: 700,
                 display: "flex",

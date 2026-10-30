@@ -43,7 +43,7 @@ export default function GenerateBillButton({
       style={{
         padding: "1.25rem",
         borderRadius: 14,
-        background: "linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)",
+        background: "linear-gradient(135deg, rgba(251, 191, 36, 0.10) 0%, rgba(251, 191, 36, 0.16) 100%)",
         border: "2px solid #F59E0B",
         marginBottom: "1.5rem",
         boxShadow: "0 6px 20px rgba(245, 158, 11, 0.14)",
@@ -59,13 +59,13 @@ export default function GenerateBillButton({
           gap: "0.5rem",
         }}
       >
-        <span style={{ fontWeight: 800, color: "#92400E", fontSize: "1.02rem" }}>
+        <span style={{ fontWeight: 800, color: "#FCD34D", fontSize: "1.02rem" }}>
           🪑 Dine-In Table Actions
         </span>
         <span
           style={{
-            background: "#FDE68A",
-            color: "#78350F",
+            background: "rgba(251, 191, 36, 0.35)",
+            color: "#FCD34D",
             padding: "2px 10px",
             borderRadius: 999,
             fontSize: "0.78rem",
@@ -76,7 +76,7 @@ export default function GenerateBillButton({
         </span>
       </div>
 
-      <p style={{ fontSize: "0.86rem", color: "#78350F", marginBottom: "1rem", lineHeight: 1.45 }}>
+      <p style={{ fontSize: "0.86rem", color: "#FCD34D", marginBottom: "1rem", lineHeight: 1.45 }}>
         Want to order more dishes, rotis, or drinks? You can place multiple orders from this table
         — all orders will be combined into one single bill at the end. When you finish dining,
         tap <strong>&ldquo;Generate Final Total Bill&rdquo;</strong> below to pay at the counter.
@@ -98,8 +98,8 @@ export default function GenerateBillButton({
             gap: "0.5rem",
             padding: "0.8rem 1rem",
             borderRadius: 10,
-            background: "#FFFFFF",
-            color: "#92400E",
+            background: "var(--color-surface-alt)",
+            color: "#FCD34D",
             border: "1.5px solid #D97706",
             fontWeight: 700,
             fontSize: "0.92rem",
@@ -119,7 +119,7 @@ export default function GenerateBillButton({
             padding: "0.95rem 1.25rem",
             borderRadius: 10,
             border: "none",
-            background: canGenerate ? "#B45309" : "#9CA3AF",
+            background: canGenerate ? "#FBBF24" : "#9CA3AF",
             color: "#FFFFFF",
             fontWeight: 800,
             fontSize: "1rem",
@@ -133,7 +133,7 @@ export default function GenerateBillButton({
         </button>
 
         {!canGenerate && (
-          <span style={{ fontSize: "0.76rem", color: "#92400E", textAlign: "center" }}>
+          <span style={{ fontSize: "0.76rem", color: "#FCD34D", textAlign: "center" }}>
             ⏳ The &ldquo;Generate Final Total Bill&rdquo; button activates as soon as staff accepts your order.
           </span>
         )}

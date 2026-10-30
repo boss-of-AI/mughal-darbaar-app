@@ -70,9 +70,9 @@ export default function CustomerRefundBox({
         style={{
           padding: "1.25rem 1.35rem",
           borderRadius: 16,
-          background: "linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)",
+          background: "linear-gradient(135deg, rgba(52, 211, 153, 0.10) 0%, rgba(52, 211, 153, 0.16) 100%)",
           border: "2px solid #10B981",
-          color: "#065F46",
+          color: "#6EE7B7",
           marginBottom: "1.5rem",
         }}
       >
@@ -101,9 +101,9 @@ export default function CustomerRefundBox({
       style={{
         padding: "1.25rem 1.35rem",
         borderRadius: 16,
-        background: "#FFFBEB",
+        background: "rgba(251, 191, 36, 0.10)",
         border: "2px solid #F59E0B",
-        color: "#78350F",
+        color: "#FCD34D",
         marginBottom: "1.5rem",
         boxShadow: "0 10px 25px rgba(245, 158, 11, 0.12)",
       }}
@@ -129,7 +129,7 @@ export default function CustomerRefundBox({
             value={note}
             onChange={(e) => setNote(e.target.value)}
             maxLength={250}
-            style={{ marginBottom: "0.65rem", background: "#FFFFFF" }}
+            style={{ marginBottom: "0.65rem", background: "var(--color-surface-alt)" }}
           />
           {error && (
             <p style={{ color: "#DC2626", fontSize: "0.8rem", fontWeight: 700, margin: "0 0 0.5rem" }}>
@@ -144,7 +144,7 @@ export default function CustomerRefundBox({
               padding: "0.75rem 1rem",
               borderRadius: 10,
               border: "none",
-              background: "linear-gradient(135deg, #D97706 0%, #B45309 100%)",
+              background: "linear-gradient(135deg, #D97706 0%, #FBBF24 100%)",
               color: "#FFFFFF",
               fontWeight: 800,
               fontSize: "0.9rem",
@@ -177,7 +177,7 @@ export default function CustomerRefundBox({
               gap: "0.75rem",
               padding: "0.85rem 1rem",
               borderRadius: 12,
-              background: "#FFFFFF",
+              background: "var(--color-surface-alt)",
               border: "2px dashed #D97706",
               marginBottom: "0.65rem",
               flexWrap: "wrap",
@@ -189,7 +189,7 @@ export default function CustomerRefundBox({
                   fontSize: "0.68rem",
                   textTransform: "uppercase",
                   letterSpacing: "0.06em",
-                  color: "#92400E",
+                  color: "#FCD34D",
                   fontWeight: 800,
                 }}
               >
@@ -200,7 +200,7 @@ export default function CustomerRefundBox({
                   fontSize: "1.35rem",
                   fontWeight: 900,
                   letterSpacing: "0.08em",
-                  color: "#B45309",
+                  color: "#FBBF24",
                   fontFamily: "monospace",
                 }}
               >
@@ -214,8 +214,8 @@ export default function CustomerRefundBox({
                 padding: "0.45rem 0.85rem",
                 borderRadius: 8,
                 border: "1px solid #D97706",
-                background: copied ? "#ECFDF5" : "#FFFBEB",
-                color: copied ? "#047857" : "#92400E",
+                background: copied ? "rgba(52, 211, 153, 0.10)" : "rgba(251, 191, 36, 0.10)",
+                color: copied ? "#34D399" : "#FCD34D",
                 fontWeight: 800,
                 fontSize: "0.78rem",
                 cursor: "pointer",
@@ -236,7 +236,7 @@ export default function CustomerRefundBox({
               gap: "0.4rem",
               fontSize: "0.78rem",
               fontWeight: 700,
-              color: "#B45309",
+              color: "#FBBF24",
             }}
           >
             <Clock size={14} /> Status: Awaiting Owner Token Verification &amp; Refund Approval

@@ -127,39 +127,39 @@ function getStatusBadgeConfig(order: Order): {
   if (order.orderType === "dine_in") {
     switch (order.status) {
       case "pending":
-        return { label: "New · To Accept", icon: Clock, color: "#D97706", bg: "#FEF3C7" };
+        return { label: "New · To Accept", icon: Clock, color: "#D97706", bg: "rgba(251, 191, 36, 0.16)" };
       case "confirmed":
       case "preparing":
-        return { label: "Order Accepted", icon: ChefHat, color: "#2563EB", bg: "#DBEAFE" };
+        return { label: "Order Accepted", icon: ChefHat, color: "#60A5FA", bg: "rgba(96, 165, 250, 0.16)" };
       case "ready":
-        return { label: "Order Is Ready", icon: Package, color: "#7C3AED", bg: "#EDE9FE" };
+        return { label: "Order Is Ready", icon: Package, color: "#C4B5FD", bg: "rgba(167, 139, 250, 0.16)" };
       case "out_for_delivery":
-        return { label: "Final Bill Generated", icon: Receipt, color: "#B45309", bg: "#FEF3C7" };
+        return { label: "Final Bill Generated", icon: Receipt, color: "#FBBF24", bg: "rgba(251, 191, 36, 0.16)" };
       case "delivered":
-        return { label: "Paid at Counter", icon: CheckCircle, color: "#059669", bg: "#D1FAE5" };
+        return { label: "Paid at Counter", icon: CheckCircle, color: "#059669", bg: "rgba(52, 211, 153, 0.16)" };
       case "rejected":
-        return { label: "Rejected", icon: XCircle, color: "#DC2626", bg: "#FEE2E2" };
+        return { label: "Rejected", icon: XCircle, color: "#DC2626", bg: "rgba(248, 113, 113, 0.16)" };
       case "cancelled":
-        return { label: "Cancelled", icon: XCircle, color: "#DC2626", bg: "#FEE2E2" };
+        return { label: "Cancelled", icon: XCircle, color: "#DC2626", bg: "rgba(248, 113, 113, 0.16)" };
     }
   }
 
   switch (order.status) {
     case "pending":
-      return { label: "New · To Accept", icon: Clock, color: "#D97706", bg: "#FEF3C7" };
+      return { label: "New · To Accept", icon: Clock, color: "#D97706", bg: "rgba(251, 191, 36, 0.16)" };
     case "confirmed":
     case "preparing":
-      return { label: "Order Placed · Cooking", icon: CheckCircle, color: "#2563EB", bg: "#DBEAFE" };
+      return { label: "Order Placed · Cooking", icon: CheckCircle, color: "#60A5FA", bg: "rgba(96, 165, 250, 0.16)" };
     case "ready":
-      return { label: "Food Ready for Rider", icon: Package, color: "#7C3AED", bg: "#EDE9FE" };
+      return { label: "Food Ready for Rider", icon: Package, color: "#C4B5FD", bg: "rgba(167, 139, 250, 0.16)" };
     case "out_for_delivery":
-      return { label: "Out for Delivery", icon: Truck, color: "#0891B2", bg: "#CFFAFE" };
+      return { label: "Out for Delivery", icon: Truck, color: "#0891B2", bg: "rgba(34, 211, 238, 0.16)" };
     case "delivered":
-      return { label: "Delivered", icon: CheckCircle, color: "#059669", bg: "#D1FAE5" };
+      return { label: "Delivered", icon: CheckCircle, color: "#059669", bg: "rgba(52, 211, 153, 0.16)" };
     case "rejected":
-      return { label: "Rejected", icon: XCircle, color: "#DC2626", bg: "#FEE2E2" };
+      return { label: "Rejected", icon: XCircle, color: "#DC2626", bg: "rgba(248, 113, 113, 0.16)" };
     case "cancelled":
-      return { label: "Cancelled", icon: XCircle, color: "#DC2626", bg: "#FEE2E2" };
+      return { label: "Cancelled", icon: XCircle, color: "#DC2626", bg: "rgba(248, 113, 113, 0.16)" };
   }
 }
 
@@ -187,8 +187,8 @@ function getPaymentBadge(order: Order): {
       sublabel: order.refundToken
         ? `Token Verified (${order.refundToken})`
         : `Refunded ${amt}`,
-      color: "#047857",
-      bg: "#D1FAE5",
+      color: "#34D399",
+      bg: "rgba(52, 211, 153, 0.16)",
       isPaid: true,
     };
   }
@@ -198,8 +198,8 @@ function getPaymentBadge(order: Order): {
       return {
         label: "PAID ONLINE",
         sublabel: "Razorpay Verified",
-        color: "#047857",
-        bg: "#D1FAE5",
+        color: "#34D399",
+        bg: "rgba(52, 211, 153, 0.16)",
         isPaid: true,
       };
     }
@@ -211,8 +211,8 @@ function getPaymentBadge(order: Order): {
           : order.paymentMethod === "cash_on_delivery"
           ? "Cash Collected"
           : "Paid at Counter",
-      color: "#047857",
-      bg: "#D1FAE5",
+      color: "#34D399",
+      bg: "rgba(52, 211, 153, 0.16)",
       isPaid: true,
     };
   }
@@ -224,8 +224,8 @@ function getPaymentBadge(order: Order): {
           order.sessionOrderCount > 1
             ? `Collect Combined Bill ${sessionAmt} at Counter`
             : `Collect ${amt} at Counter`,
-        color: "#B45309",
-        bg: "#FEF3C7",
+        color: "#FBBF24",
+        bg: "rgba(251, 191, 36, 0.16)",
         isPaid: false,
       };
     }
@@ -235,8 +235,8 @@ function getPaymentBadge(order: Order): {
         order.sessionOrderCount > 1
           ? `Running Table Total: ${sessionAmt} (${order.sessionOrderCount} orders)`
           : `Pay at Counter after meal (${amt})`,
-      color: "#92400E",
-      bg: "#FFFBEB",
+      color: "#FCD34D",
+      bg: "rgba(251, 191, 36, 0.10)",
       isPaid: false,
     };
   }
@@ -244,8 +244,8 @@ function getPaymentBadge(order: Order): {
     return {
       label: "CASH ON DELIVERY",
       sublabel: `Collect ${amt}`,
-      color: "#B45309",
-      bg: "#FEF3C7",
+      color: "#FBBF24",
+      bg: "rgba(251, 191, 36, 0.16)",
       isPaid: false,
     };
   }
@@ -253,8 +253,8 @@ function getPaymentBadge(order: Order): {
     return {
       label: "PAY AT COUNTER",
       sublabel: `Collect ${amt}`,
-      color: "#B45309",
-      bg: "#FEF3C7",
+      color: "#FBBF24",
+      bg: "rgba(251, 191, 36, 0.16)",
       isPaid: false,
     };
   }
@@ -263,7 +263,7 @@ function getPaymentBadge(order: Order): {
       label: "PAYMENT FAILED",
       sublabel: "Online attempt failed",
       color: "#DC2626",
-      bg: "#FEE2E2",
+      bg: "rgba(248, 113, 113, 0.16)",
       isPaid: false,
     };
   }
@@ -271,7 +271,7 @@ function getPaymentBadge(order: Order): {
     label: "PAYMENT PENDING",
     sublabel: "Awaiting Razorpay",
     color: "#D97706",
-    bg: "#FEF3C7",
+    bg: "rgba(251, 191, 36, 0.16)",
     isPaid: false,
   };
 }
@@ -960,9 +960,9 @@ export default function OrdersClient({
                   marginLeft: "0.5rem",
                   padding: "0.18rem 0.55rem",
                   borderRadius: 999,
-                  background: "#FFFBEB",
+                  background: "rgba(251, 191, 36, 0.10)",
                   border: "1px solid #FCD34D",
-                  color: "#B45309",
+                  color: "#FBBF24",
                   fontWeight: 800,
                   fontSize: "0.72rem",
                 }}
@@ -1001,8 +1001,8 @@ export default function OrdersClient({
                 padding: "0.4rem 0.85rem",
                 borderRadius: 999,
                 border: "1.5px solid #F59E0B",
-                background: "#FFFBEB",
-                color: "#B45309",
+                background: "rgba(251, 191, 36, 0.10)",
+                color: "#FBBF24",
                 fontWeight: 800,
                 fontSize: "0.76rem",
                 cursor: "pointer",
@@ -1020,7 +1020,7 @@ export default function OrdersClient({
           style={{
             padding: "0.9rem 1.15rem",
             borderRadius: 14,
-            background: storeStatus.isOpenNow ? "#ECFDF5" : "#FEF2F2",
+            background: storeStatus.isOpenNow ? "rgba(52, 211, 153, 0.10)" : "rgba(248, 113, 113, 0.10)",
             border: storeStatus.isOpenNow
               ? "1.5px solid #10B981"
               : "1.5px solid #EF4444",
@@ -1046,10 +1046,10 @@ export default function OrdersClient({
             >
               {storeStatus.isOpenNow ? "🟢 LIVE · ACCEPTING ORDERS" : "🔴 CLOSED · NOT LIVE"}
             </span>
-            <div style={{ fontSize: "0.82rem", color: "#1F2937" }}>
+            <div style={{ fontSize: "0.82rem", color: "#E5E7EB" }}>
               <strong>Order Accepting Timings ({storeStatus.todayLabel}):</strong>{" "}
               <span style={{ fontWeight: 800 }}>{storeStatus.todayFormattedWindow}</span>
-              <span style={{ marginLeft: 8, color: "#6B7280", fontSize: "0.75rem" }}>
+              <span style={{ marginLeft: 8, color: "#9CA3AF", fontSize: "0.75rem" }}>
                 (IST Now: {storeStatus.currentIstTimeFormatted})
               </span>
             </div>
@@ -1058,8 +1058,8 @@ export default function OrdersClient({
                 style={{
                   fontSize: "0.76rem",
                   fontWeight: 800,
-                  color: "#047857",
-                  background: "#D1FAE5",
+                  color: "#34D399",
+                  background: "rgba(52, 211, 153, 0.16)",
                   padding: "0.2rem 0.55rem",
                   borderRadius: 6,
                 }}
@@ -1085,7 +1085,7 @@ export default function OrdersClient({
                 gap: "0.3rem",
                 fontSize: "0.76rem",
                 fontWeight: 700,
-                color: "#374151",
+                color: "#D1D5DB",
               }}
             >
               Open:
@@ -1096,10 +1096,10 @@ export default function OrdersClient({
                 style={{
                   padding: "0.28rem 0.45rem",
                   borderRadius: 6,
-                  border: "1px solid #D1D5DB",
+                  border: "1px solid rgba(255, 255, 255, 0.14)",
                   fontSize: "0.78rem",
                   fontWeight: 700,
-                  background: "#FFFFFF",
+                  background: "var(--color-surface-alt)",
                 }}
               />
             </label>
@@ -1110,7 +1110,7 @@ export default function OrdersClient({
                 gap: "0.3rem",
                 fontSize: "0.76rem",
                 fontWeight: 700,
-                color: "#374151",
+                color: "#D1D5DB",
               }}
             >
               Close:
@@ -1121,10 +1121,10 @@ export default function OrdersClient({
                 style={{
                   padding: "0.28rem 0.45rem",
                   borderRadius: 6,
-                  border: "1px solid #D1D5DB",
+                  border: "1px solid rgba(255, 255, 255, 0.14)",
                   fontSize: "0.78rem",
                   fontWeight: 700,
-                  background: "#FFFFFF",
+                  background: "var(--color-surface-alt)",
                 }}
               />
             </label>
@@ -1135,8 +1135,8 @@ export default function OrdersClient({
                 padding: "0.36rem 0.7rem",
                 borderRadius: 8,
                 border: "1px solid #D97706",
-                background: "#FFFBEB",
-                color: "#92400E",
+                background: "rgba(251, 191, 36, 0.10)",
+                color: "#FCD34D",
                 fontSize: "0.75rem",
                 fontWeight: 800,
                 cursor: "pointer",
@@ -1193,7 +1193,7 @@ export default function OrdersClient({
               timePeriod === "today"
                 ? "2px solid #059669"
                 : "1.5px solid var(--color-border)",
-            background: timePeriod === "today" ? "#ECFDF5" : "var(--color-surface)",
+            background: timePeriod === "today" ? "rgba(52, 211, 153, 0.10)" : "var(--color-surface)",
             cursor: "pointer",
             textAlign: "left",
             transition: "all 0.15s ease",
@@ -1205,8 +1205,8 @@ export default function OrdersClient({
                 width: 40,
                 height: 40,
                 borderRadius: 10,
-                background: timePeriod === "today" ? "#059669" : "#F3F4F6",
-                color: timePeriod === "today" ? "#FFFFFF" : "#374151",
+                background: timePeriod === "today" ? "#059669" : "rgba(255, 255, 255, 0.06)",
+                color: timePeriod === "today" ? "#FFFFFF" : "#D1D5DB",
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -1219,7 +1219,7 @@ export default function OrdersClient({
                 style={{
                   fontSize: "0.95rem",
                   fontWeight: 900,
-                  color: timePeriod === "today" ? "#065F46" : "var(--color-text)",
+                  color: timePeriod === "today" ? "#6EE7B7" : "var(--color-text)",
                 }}
               >
                 📅 Today&apos;s Orders (Live)
@@ -1248,8 +1248,8 @@ export default function OrdersClient({
               style={{
                 padding: "0.26rem 0.65rem",
                 borderRadius: 999,
-                background: timePeriod === "today" ? "#D1FAE5" : "#F3F4F6",
-                color: timePeriod === "today" ? "#065F46" : "#374151",
+                background: timePeriod === "today" ? "rgba(52, 211, 153, 0.16)" : "rgba(255, 255, 255, 0.06)",
+                color: timePeriod === "today" ? "#6EE7B7" : "#D1D5DB",
                 fontSize: "0.76rem",
                 fontWeight: 800,
               }}
@@ -1275,7 +1275,7 @@ export default function OrdersClient({
               timePeriod === "past_week"
                 ? "2px solid #7C3AED"
                 : "1.5px solid var(--color-border)",
-            background: timePeriod === "past_week" ? "#F5F3FF" : "var(--color-surface)",
+            background: timePeriod === "past_week" ? "rgba(167, 139, 250, 0.10)" : "var(--color-surface)",
             cursor: "pointer",
             textAlign: "left",
             transition: "all 0.15s ease",
@@ -1287,8 +1287,8 @@ export default function OrdersClient({
                 width: 40,
                 height: 40,
                 borderRadius: 10,
-                background: timePeriod === "past_week" ? "#7C3AED" : "#F3F4F6",
-                color: timePeriod === "past_week" ? "#FFFFFF" : "#374151",
+                background: timePeriod === "past_week" ? "#7C3AED" : "rgba(255, 255, 255, 0.06)",
+                color: timePeriod === "past_week" ? "#FFFFFF" : "#D1D5DB",
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -1301,7 +1301,7 @@ export default function OrdersClient({
                 style={{
                   fontSize: "0.95rem",
                   fontWeight: 900,
-                  color: timePeriod === "past_week" ? "#5B21B6" : "var(--color-text)",
+                  color: timePeriod === "past_week" ? "#C4B5FD" : "var(--color-text)",
                 }}
               >
                 🗓️ Past Week / Earlier Orders
@@ -1318,8 +1318,8 @@ export default function OrdersClient({
               style={{
                 padding: "0.26rem 0.65rem",
                 borderRadius: 999,
-                background: timePeriod === "past_week" ? "#EDE9FE" : "#F3F4F6",
-                color: timePeriod === "past_week" ? "#5B21B6" : "#374151",
+                background: timePeriod === "past_week" ? "rgba(167, 139, 250, 0.16)" : "rgba(255, 255, 255, 0.06)",
+                color: timePeriod === "past_week" ? "#C4B5FD" : "#D1D5DB",
                 fontSize: "0.76rem",
                 fontWeight: 800,
               }}
@@ -1336,8 +1336,8 @@ export default function OrdersClient({
           style={{
             padding: "0.55rem 0.95rem",
             borderRadius: 10,
-            background: "#F8FAFC",
-            border: "1px solid #E2E8F0",
+            background: "rgba(255, 255, 255, 0.06)",
+            border: "1px solid rgba(255, 255, 255, 0.14)",
             marginBottom: "0.95rem",
             display: "flex",
             alignItems: "center",
@@ -1345,7 +1345,7 @@ export default function OrdersClient({
             flexWrap: "wrap",
             gap: "0.5rem",
             fontSize: "0.76rem",
-            color: "#475569",
+            color: "#CBD5E1",
           }}
         >
           <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", fontWeight: 700 }}>
@@ -1355,7 +1355,7 @@ export default function OrdersClient({
             <strong>Completed Orders</strong>.
           </span>
           {userRole === "owner" && (
-            <span style={{ fontSize: "0.72rem", color: "#64748B", fontWeight: 600 }}>
+            <span style={{ fontSize: "0.72rem", color: "#94A3B8", fontWeight: 600 }}>
               🔒 Today&apos;s live orders are protected from deletion (switch to{" "}
               <strong>Past Week Orders</strong> to hide or delete older records).
             </span>
@@ -1366,7 +1366,7 @@ export default function OrdersClient({
           style={{
             padding: "0.85rem 1.05rem",
             borderRadius: 12,
-            background: "#F5F3FF",
+            background: "rgba(167, 139, 250, 0.10)",
             border: "1.5px solid #C4B5FD",
             marginBottom: "1rem",
             display: "flex",
@@ -1377,10 +1377,10 @@ export default function OrdersClient({
           }}
         >
           <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
-            <span style={{ fontSize: "0.84rem", fontWeight: 800, color: "#4C1D95" }}>
+            <span style={{ fontSize: "0.84rem", fontWeight: 800, color: "#DDD6FE" }}>
               🗓️ Past Week &amp; Earlier Orders Archive ({allPastOrdersRaw.length} total before today)
             </span>
-            <span style={{ fontSize: "0.74rem", color: "#6D28D9" }}>
+            <span style={{ fontSize: "0.74rem", color: "#C4B5FD" }}>
               {userRole === "owner"
                 ? "As Admin (Owner), you can hide or permanently delete past orders here. Today's orders are strictly protected."
                 : "Viewing orders placed before today."}
@@ -1391,7 +1391,7 @@ export default function OrdersClient({
                   marginTop: 4,
                   fontSize: "0.76rem",
                   fontWeight: 800,
-                  color: "#047857",
+                  color: "#34D399",
                 }}
               >
                 {pastActionFeedback}
@@ -1413,8 +1413,8 @@ export default function OrdersClient({
                       padding: "0.4rem 0.7rem",
                       borderRadius: 8,
                       border: "1px solid #8B5CF6",
-                      background: "#FFFFFF",
-                      color: "#5B21B6",
+                      background: "var(--color-surface-alt)",
+                      color: "#C4B5FD",
                       fontSize: "0.74rem",
                       fontWeight: 800,
                       cursor: "pointer",
@@ -1432,8 +1432,8 @@ export default function OrdersClient({
                       padding: "0.4rem 0.7rem",
                       borderRadius: 8,
                       border: "1px solid #10B981",
-                      background: "#ECFDF5",
-                      color: "#047857",
+                      background: "rgba(52, 211, 153, 0.10)",
+                      color: "#34D399",
                       fontSize: "0.74rem",
                       fontWeight: 800,
                       cursor: "pointer",
@@ -1456,9 +1456,9 @@ export default function OrdersClient({
                     gap: "0.3rem",
                     padding: "0.4rem 0.75rem",
                     borderRadius: 8,
-                    border: "1px solid #6B7280",
-                    background: "#FFFFFF",
-                    color: "#374151",
+                    border: "1px solid #9CA3AF",
+                    background: "var(--color-surface-alt)",
+                    color: "#D1D5DB",
                     fontSize: "0.74rem",
                     fontWeight: 800,
                     cursor: "pointer",
@@ -1614,8 +1614,8 @@ export default function OrdersClient({
                 padding: "0.45rem 0.95rem",
                 borderRadius: 999,
                 border: "1.5px solid var(--color-primary)",
-                background: "#FFFBEB",
-                color: "#92400E",
+                background: "rgba(251, 191, 36, 0.10)",
+                color: "#FCD34D",
                 fontSize: "0.78rem",
                 fontWeight: 800,
                 cursor: "pointer",
@@ -1751,9 +1751,9 @@ export default function OrdersClient({
                           padding: "0.65rem 0.75rem",
                           borderRadius: 10,
                           background: order.riderReachedAt
-                            ? "#ECFDF5"
+                            ? "rgba(52, 211, 153, 0.10)"
                             : order.riderId
-                            ? "#EFF6FF"
+                            ? "rgba(96, 165, 250, 0.10)"
                             : "var(--color-surface-alt)",
                           border: order.riderReachedAt
                             ? "1.5px solid #10B981"
@@ -1777,9 +1777,9 @@ export default function OrdersClient({
                               fontSize: "0.76rem",
                               fontWeight: 800,
                               color: order.riderReachedAt
-                                ? "#047857"
+                                ? "#34D399"
                                 : order.riderId
-                                ? "#1D4ED8"
+                                ? "#93C5FD"
                                 : "var(--color-text-muted)",
                             }}
                           >
@@ -1795,7 +1795,7 @@ export default function OrdersClient({
                               style={{
                                 fontSize: "0.72rem",
                                 fontWeight: 700,
-                                color: "#2563EB",
+                                color: "#60A5FA",
                                 textDecoration: "none",
                               }}
                             >
@@ -1829,7 +1829,7 @@ export default function OrdersClient({
                                   border: "1px solid var(--color-border)",
                                   fontSize: "0.76rem",
                                   fontWeight: 600,
-                                  background: "#fff",
+                                  background: "var(--color-surface-alt)",
                                 }}
                               >
                                 {riders.map((r) => {
@@ -1956,8 +1956,8 @@ export default function OrdersClient({
                   <div
                     style={{
                       padding: "0.75rem 1rem",
-                      background: "#F5F3FF",
-                      color: "#5B21B6",
+                      background: "rgba(167, 139, 250, 0.10)",
+                      color: "#C4B5FD",
                       fontSize: "0.78rem",
                       fontWeight: 600,
                       textAlign: "center",
@@ -1979,8 +1979,8 @@ export default function OrdersClient({
                         padding: "0.45rem 0.75rem",
                         borderRadius: 8,
                         border: "1px solid #C4B5FD",
-                        background: "#EDE9FE",
-                        color: "#4C1D95",
+                        background: "rgba(167, 139, 250, 0.16)",
+                        color: "#DDD6FE",
                         fontWeight: 700,
                         fontSize: "0.75rem",
                         cursor: "pointer",
@@ -1997,8 +1997,8 @@ export default function OrdersClient({
                   <div
                     style={{
                       padding: "0.75rem 1.25rem",
-                      background: "#ECFEFF",
-                      color: "#0E7490",
+                      background: "rgba(34, 211, 238, 0.10)",
+                      color: "#67E8F9",
                       fontSize: "0.78rem",
                       fontWeight: 600,
                       textAlign: "center",
@@ -2035,15 +2035,15 @@ export default function OrdersClient({
                         background:
                           order.paymentStatus === "refunded" ||
                           order.refundStatus === "processed"
-                            ? "#ECFDF5"
-                            : "#FFFBEB",
+                            ? "rgba(52, 211, 153, 0.10)"
+                            : "rgba(251, 191, 36, 0.10)",
                         borderTop: "1.5px solid #F59E0B",
                         fontSize: "0.78rem",
                       }}
                     >
                       {order.paymentStatus === "refunded" ||
                       order.refundStatus === "processed" ? (
-                        <div style={{ color: "#065F46", fontWeight: 800 }}>
+                        <div style={{ color: "#6EE7B7", fontWeight: 800 }}>
                           ✅ Online Payment Refunded ({paise2rupee(order.totalPaise)})
                           {order.refundToken ? ` · Verified Token: ${order.refundToken}` : ""}
                         </div>
@@ -2058,7 +2058,7 @@ export default function OrdersClient({
                               flexWrap: "wrap",
                             }}
                           >
-                            <strong style={{ color: "#92400E" }}>
+                            <strong style={{ color: "#FCD34D" }}>
                               🔐 Owner Refund Verification ({paise2rupee(order.totalPaise)})
                             </strong>
                             {order.refundToken ? (
@@ -2066,9 +2066,9 @@ export default function OrdersClient({
                                 style={{
                                   padding: "0.15rem 0.5rem",
                                   borderRadius: 6,
-                                  background: "#FEF3C7",
+                                  background: "rgba(251, 191, 36, 0.16)",
                                   border: "1px solid #D97706",
-                                  color: "#B45309",
+                                  color: "#FBBF24",
                                   fontWeight: 800,
                                   fontFamily: "monospace",
                                 }}
@@ -2076,13 +2076,13 @@ export default function OrdersClient({
                                 Customer Token: {order.refundToken}
                               </span>
                             ) : (
-                              <span style={{ color: "#B45309", fontSize: "0.72rem" }}>
+                              <span style={{ color: "#FBBF24", fontSize: "0.72rem" }}>
                                 Waiting for customer to generate Refund Token…
                               </span>
                             )}
                           </div>
                           {order.refundNote && (
-                            <div style={{ color: "#78350F", fontSize: "0.74rem" }}>
+                            <div style={{ color: "#FCD34D", fontSize: "0.74rem" }}>
                               💬 Customer Note: {order.refundNote}
                             </div>
                           )}
@@ -2106,7 +2106,7 @@ export default function OrdersClient({
                                   fontSize: "0.76rem",
                                   fontFamily: "monospace",
                                   fontWeight: 700,
-                                  background: "#FFFFFF",
+                                  background: "var(--color-surface-alt)",
                                 }}
                               />
                               <button
@@ -2141,7 +2141,7 @@ export default function OrdersClient({
                           )}
                         </div>
                       ) : (
-                        <div style={{ color: "#92400E", fontWeight: 700 }}>
+                        <div style={{ color: "#FCD34D", fontWeight: 700 }}>
                           🔒 Online Paid Order Rejected — Only the Restaurant Owner (Admin) can
                           verify the customer&apos;s Refund Token and process this refund.
                         </div>
@@ -2154,7 +2154,7 @@ export default function OrdersClient({
                   <div
                     style={{
                       padding: "0.6rem 1rem",
-                      background: "#F8FAFC",
+                      background: "rgba(255, 255, 255, 0.06)",
                       borderTop: "1px solid var(--color-border)",
                       display: "flex",
                       alignItems: "center",
@@ -2162,7 +2162,7 @@ export default function OrdersClient({
                       gap: "0.5rem",
                     }}
                   >
-                    <span style={{ fontSize: "0.7rem", color: "#64748B", fontWeight: 700 }}>
+                    <span style={{ fontSize: "0.7rem", color: "#94A3B8", fontWeight: 700 }}>
                       🗓️ Past Order ({getIstDateKey(order.createdAt)})
                     </span>
                     <div style={{ display: "flex", gap: "0.4rem" }}>
@@ -2175,9 +2175,9 @@ export default function OrdersClient({
                           gap: "0.25rem",
                           padding: "0.28rem 0.6rem",
                           borderRadius: 6,
-                          border: "1px solid #CBD5E1",
-                          background: "#FFFFFF",
-                          color: "#334155",
+                          border: "1px solid rgba(255, 255, 255, 0.14)",
+                          background: "var(--color-surface-alt)",
+                          color: "#E2E8F0",
                           fontSize: "0.72rem",
                           fontWeight: 700,
                           cursor: "pointer",
@@ -2196,8 +2196,8 @@ export default function OrdersClient({
                           gap: "0.25rem",
                           padding: "0.28rem 0.6rem",
                           borderRadius: 6,
-                          border: "1px solid #FECACA",
-                          background: "#FEF2F2",
+                          border: "1px solid rgba(248, 113, 113, 0.35)",
+                          background: "rgba(248, 113, 113, 0.10)",
                           color: "#DC2626",
                           fontSize: "0.72rem",
                           fontWeight: 700,

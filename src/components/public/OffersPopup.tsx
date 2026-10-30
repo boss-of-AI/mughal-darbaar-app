@@ -144,7 +144,7 @@ export default function OffersPopup() {
         >
           <div
             style={{
-              background: "#FFFDF9",
+              background: "var(--color-surface-alt)",
               border: "2px solid #D4AF37",
               borderRadius: "20px",
               maxWidth: "480px",
@@ -214,7 +214,7 @@ export default function OffersPopup() {
                     key={o.id}
                     style={{
                       border: isApplied ? "2px solid #059669" : "1.5px dashed #D4AF37",
-                      background: isApplied ? "#ECFDF5" : "#FFF9EB",
+                      background: isApplied ? "rgba(52, 211, 153, 0.10)" : "var(--color-surface-alt)",
                       borderRadius: "14px",
                       padding: "1rem",
                       display: "flex",
@@ -247,8 +247,8 @@ export default function OffersPopup() {
                       </span>
                       <span
                         style={{
-                          background: "#FEF08A",
-                          color: "#854D0E",
+                          background: "rgba(251, 191, 36, 0.30)",
+                          color: "#FDE047",
                           fontWeight: 800,
                           fontSize: "0.78rem",
                           padding: "3px 8px",
@@ -259,7 +259,7 @@ export default function OffersPopup() {
                       </span>
                     </div>
 
-                    <p style={{ margin: 0, fontWeight: 700, color: "#1F2937", fontSize: "0.95rem" }}>
+                    <p style={{ margin: 0, fontWeight: 700, color: "#E5E7EB", fontSize: "0.95rem" }}>
                       {o.title}
                     </p>
 

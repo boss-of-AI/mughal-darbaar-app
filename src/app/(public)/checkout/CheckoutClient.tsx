@@ -479,7 +479,7 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
               style={{
                 padding: "0.75rem 1rem",
                 borderRadius: "10px",
-                background: "#FFFBEB",
+                background: "rgba(251, 191, 36, 0.10)",
                 border: "1px solid #F59E0B",
                 marginBottom: "0.75rem",
               }}
@@ -493,7 +493,7 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
                   gap: "0.5rem",
                 }}
               >
-                <span style={{ fontSize: "0.86rem", fontWeight: 700, color: "#92400E" }}>
+                <span style={{ fontSize: "0.86rem", fontWeight: 700, color: "#FCD34D" }}>
                   🪑 Dine-in Table Order — Final bill paid at counter after your meal.
                 </span>
                 {tables.length > 0 && (
@@ -505,8 +505,8 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
                       padding: "4px 10px",
                       borderRadius: 8,
                       border: "1px solid #D97706",
-                      background: "#FFFFFF",
-                      color: "#92400E",
+                      background: "var(--color-surface-alt)",
+                      color: "#FCD34D",
                       fontSize: "0.8rem",
                       fontWeight: 700,
                     }}
@@ -559,8 +559,8 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
                     padding: "0.35rem 0.75rem",
                     borderRadius: "8px",
                     border: "1px solid #2563EB",
-                    background: "#EFF6FF",
-                    color: "#1D4ED8",
+                    background: "rgba(96, 165, 250, 0.10)",
+                    color: "#93C5FD",
                     fontSize: "0.78rem",
                     fontWeight: 700,
                     cursor: locating ? "wait" : "pointer",
@@ -573,7 +573,7 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
                 <p
                   style={{
                     fontSize: "0.78rem",
-                    color: coords ? "#059669" : "#B45309",
+                    color: coords ? "#059669" : "#FBBF24",
                     fontWeight: 600,
                     margin: "0.25rem 0",
                   }}
@@ -656,9 +656,9 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
               style={{
                 padding: "0.9rem 1rem",
                 borderRadius: 12,
-                background: "#FEF2F2",
+                background: "rgba(248, 113, 113, 0.10)",
                 border: "1.5px solid #EF4444",
-                color: "#991B1B",
+                color: "#FCA5A5",
                 marginBottom: "0.75rem",
                 fontSize: "0.84rem",
               }}
@@ -745,7 +745,7 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
               </p>
             )}
             {matchedOffer && discountPaise === 0 && (
-              <p style={{ fontSize: "0.78rem", color: "#B45309", fontWeight: 600, marginTop: "0.35rem" }}>
+              <p style={{ fontSize: "0.78rem", color: "#FBBF24", fontWeight: 600, marginTop: "0.35rem" }}>
                 ℹ️ Code {matchedOffer.code} gives {matchedOffer.discountPct}% OFF on{" "}
                 <strong>{matchedOffer.categoryName}</strong> dishes (none in cart yet).
               </p>
@@ -758,8 +758,8 @@ export default function CheckoutClient({ cfg }: { cfg: Cfg }) {
                     type="button"
                     onClick={() => setCouponCode(o.code)}
                     style={{
-                      background: "#FEF3C7",
-                      color: "#92400E",
+                      background: "rgba(251, 191, 36, 0.16)",
+                      color: "#FCD34D",
                       border: "1px dashed #D97706",
                       borderRadius: "6px",
                       padding: "3px 8px",

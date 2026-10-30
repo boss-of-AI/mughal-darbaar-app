@@ -174,12 +174,12 @@ export default async function DashboardPage() {
                 const isOnline = order.paymentMethod === "razorpay";
                 const isCod = order.paymentMethod === "cash_on_delivery";
                 const payBadge = isPaid
-                  ? { label: isOnline ? "✓ Paid Online" : "✓ Paid", bg: "#DCFCE7", color: "#15803D" }
+                  ? { label: isOnline ? "✓ Paid Online" : "✓ Paid", bg: "rgba(52, 211, 153, 0.16)", color: "#4ADE80" }
                   : isCod
-                  ? { label: "COD · Collect", bg: "#FEF3C7", color: "#B45309" }
+                  ? { label: "COD · Collect", bg: "rgba(251, 191, 36, 0.16)", color: "#FBBF24" }
                   : isOnline
-                  ? { label: "Unpaid Online", bg: "#FEE2E2", color: "#B91C1C" }
-                  : { label: "Counter · Collect", bg: "#E0E7FF", color: "#4338CA" };
+                  ? { label: "Unpaid Online", bg: "rgba(248, 113, 113, 0.16)", color: "#F87171" }
+                  : { label: "Counter · Collect", bg: "rgba(96, 165, 250, 0.16)", color: "#93C5FD" };
 
                 return (
                   <Link key={order.id} href="/dashboard/orders" className={styles.orderRow}>

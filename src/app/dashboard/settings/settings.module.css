@@ -81,8 +81,8 @@
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-lg);
-  background: #D1FAE5;
-  color: #065F46;
+  background: rgba(52, 211, 153, 0.16);
+  color: #6EE7B7;
   font-size: var(--text-sm);
   font-weight: 600;
 }
@@ -90,8 +90,8 @@
 .errorBanner {
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-lg);
-  background: #FEE2E2;
-  color: #991B1B;
+  background: rgba(248, 113, 113, 0.16);
+  color: #FCA5A5;
   font-size: var(--text-sm);
   font-weight: 600;
 }

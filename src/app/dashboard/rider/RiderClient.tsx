@@ -265,7 +265,7 @@ export default function RiderClient({
           style={{
             padding: "1.1rem 1.25rem",
             borderRadius: 14,
-            background: totalCashToCollectPaise > 0 ? "#FFFBEB" : "#ECFDF5",
+            background: totalCashToCollectPaise > 0 ? "rgba(251, 191, 36, 0.10)" : "rgba(52, 211, 153, 0.10)",
             border:
               totalCashToCollectPaise > 0
                 ? "1.5px solid #F59E0B"
@@ -275,7 +275,7 @@ export default function RiderClient({
           <span
             style={{
               fontSize: "0.78rem",
-              color: totalCashToCollectPaise > 0 ? "#92400E" : "#065F46",
+              color: totalCashToCollectPaise > 0 ? "#FCD34D" : "#6EE7B7",
               fontWeight: 800,
             }}
           >
@@ -286,7 +286,7 @@ export default function RiderClient({
               fontSize: "1.75rem",
               fontWeight: 800,
               margin: "0.2rem 0 0",
-              color: totalCashToCollectPaise > 0 ? "#B45309" : "#047857",
+              color: totalCashToCollectPaise > 0 ? "#FBBF24" : "#34D399",
             }}
           >
             {paise2rupee(totalCashToCollectPaise)}
@@ -473,15 +473,15 @@ export default function RiderClient({
                       fontSize: "0.75rem",
                       fontWeight: 800,
                       background: isDelivered
-                        ? "#D1FAE5"
+                        ? "rgba(52, 211, 153, 0.16)"
                         : hasReached
-                        ? "#DCFCE7"
-                        : "#DBEAFE",
+                        ? "rgba(52, 211, 153, 0.16)"
+                        : "rgba(96, 165, 250, 0.16)",
                       color: isDelivered
-                        ? "#047857"
+                        ? "#34D399"
                         : hasReached
-                        ? "#15803D"
-                        : "#1D4ED8",
+                        ? "#4ADE80"
+                        : "#93C5FD",
                     }}
                   >
                     {isDelivered
@@ -497,14 +497,14 @@ export default function RiderClient({
                   style={{
                     padding: "0.85rem 1.2rem",
                     background: isPaid
-                      ? "#D1FAE5"
+                      ? "rgba(52, 211, 153, 0.16)"
                       : isCod
-                      ? "#FEF3C7"
-                      : "#DBEAFE",
+                      ? "rgba(251, 191, 36, 0.16)"
+                      : "rgba(96, 165, 250, 0.16)",
                     color: isPaid
-                      ? "#047857"
+                      ? "#34D399"
                       : isCod
-                      ? "#92400E"
+                      ? "#FCD34D"
                       : "#1E40AF",
                     borderBottom: "1px solid var(--color-border)",
                     display: "flex",
@@ -580,8 +580,8 @@ export default function RiderClient({
                           gap: 6,
                           padding: "0.45rem 0.85rem",
                           borderRadius: 10,
-                          background: "#EFF6FF",
-                          color: "#1D4ED8",
+                          background: "rgba(96, 165, 250, 0.10)",
+                          color: "#93C5FD",
                           border: "1px solid #93C5FD",
                           fontWeight: 800,
                           fontSize: "0.82rem",
@@ -751,8 +751,8 @@ export default function RiderClient({
                         margin: "0.4rem 0 0",
                         padding: "0.35rem 0.5rem",
                         borderRadius: 6,
-                        background: "#FFFBEB",
-                        color: "#92400E",
+                        background: "rgba(251, 191, 36, 0.10)",
+                        color: "#FCD34D",
                         fontSize: "0.76rem",
                       }}
                     >
@@ -804,9 +804,9 @@ export default function RiderClient({
                         style={{
                           padding: "0.55rem 0.8rem",
                           borderRadius: 8,
-                          background: "#ECFDF5",
+                          background: "rgba(52, 211, 153, 0.10)",
                           border: "1px solid #10B981",
-                          color: "#047857",
+                          color: "#34D399",
                           fontSize: "0.8rem",
                           fontWeight: 700,
                           textAlign: "center",

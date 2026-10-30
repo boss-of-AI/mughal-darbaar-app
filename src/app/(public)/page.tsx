@@ -97,6 +97,16 @@ const featuredDishes = [
   },
 ];
 
+const biteCategories = [
+  { label: "Biryani", href: "/menu", photo: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=300&q=70" },
+  { label: "Kebabs", href: "/menu", photo: "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?auto=format&fit=crop&w=300&q=70" },
+  { label: "Curries", href: "/menu", photo: "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?auto=format&fit=crop&w=300&q=70" },
+  { label: "Tandoor", href: "/menu", photo: "https://images.unsplash.com/photo-1610057099443-fde8c4d50f91?auto=format&fit=crop&w=300&q=70" },
+  { label: "Breads", href: "/menu", photo: "https://images.unsplash.com/photo-1626074353765-517a681e40be?auto=format&fit=crop&w=300&q=70" },
+  { label: "Sweets", href: "/menu", photo: "https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=300&q=70" },
+  { label: "Drinks", href: "/menu", photo: "https://images.unsplash.com/photo-1541658016709-82535e94bc69?auto=format&fit=crop&w=300&q=70" },
+];
+
 const stats = [
   { value: "500+", label: "Daily Orders", icon: "🍽️" },
   { value: "4.9★", label: "Customer Rating", icon: "⭐" },
@@ -212,15 +222,15 @@ export default function HomePage() {
           {/* Hero visual — ornamental card */}
           <div className={styles.heroVisual} aria-hidden="true">
             <div className={styles.heroCard}>
+              <div className={styles.heroPhoto} />
               <div className={styles.heroCardInner}>
-                <span className={styles.heroEmoji}>🍛</span>
                 <h3 className={styles.heroCardTitle}>Today&apos;s Special</h3>
                 <p className={styles.heroCardItem}>Royal Dum Biryani</p>
                 <div className={styles.heroCardPrice}>
                   <span className={styles.heroCardPriceLabel}>Starting at</span>
                   <span className={styles.heroCardPriceValue}>₹380</span>
                 </div>
-                <Link href="/menu" className="btn btn--gold btn--sm">
+                <Link href="/menu" className="btn btn--primary btn--sm">
                   Add to Cart
                 </Link>
               </div>
@@ -250,6 +260,31 @@ export default function HomePage() {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Bites: story-style category rings ─────────────────── */}
+      <section className={styles.bitesSection} aria-label="Browse by category">
+        <div className="container">
+          <div className={styles.bitesHeader}>
+            <h2 className={styles.bitesTitle}>Bites</h2>
+            <Link href="/menu" className={styles.viewAll}>
+              View all
+            </Link>
+          </div>
+          <div className={styles.bitesRow}>
+            {biteCategories.map((b) => (
+              <Link key={b.label} href={b.href} className={styles.bite}>
+                <span className={styles.biteRing}>
+                  <span
+                    className={styles.bitePhoto}
+                    style={{ backgroundImage: `url("${b.photo}")` }}
+                  />
+                </span>
+                <span className={styles.biteLabel}>{b.label}</span>
+              </Link>
+            ))}
           </div>
         </div>
       </section>

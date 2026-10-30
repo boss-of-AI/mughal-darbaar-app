@@ -419,7 +419,7 @@ export default function ProfileClient() {
                           : "1.5px solid #F59E0B",
                         borderRadius: 12,
                         padding: "1rem",
-                        background: order.riderReachedAt ? "#ECFDF5" : "#FFFBEB",
+                        background: order.riderReachedAt ? "rgba(52, 211, 153, 0.10)" : "rgba(251, 191, 36, 0.10)",
                       }}
                     >
                       <div
@@ -443,8 +443,8 @@ export default function ProfileClient() {
                               fontWeight: 700,
                               padding: "2px 8px",
                               borderRadius: 999,
-                              background: "#FDE68A",
-                              color: "#92400E",
+                              background: "rgba(251, 191, 36, 0.35)",
+                              color: "#FCD34D",
                               textTransform: "capitalize",
                             }}
                           >
@@ -490,7 +490,7 @@ export default function ProfileClient() {
                           style={{
                             fontSize: "0.8rem",
                             fontWeight: 700,
-                            color: "#0E7490",
+                            color: "#67E8F9",
                             marginBottom: "0.5rem",
                           }}
                         >
@@ -523,7 +523,7 @@ export default function ProfileClient() {
                           style={{
                             fontSize: "0.78rem",
                             fontWeight: 700,
-                            color: isPaid ? "#047857" : "#B45309",
+                            color: isPaid ? "#34D399" : "#FBBF24",
                           }}
                         >
                           {isPaid
@@ -622,8 +622,8 @@ export default function ProfileClient() {
                           fontWeight: 800,
                           padding: "2px 8px",
                           borderRadius: 999,
-                          background: order.status === "delivered" ? "#D1FAE5" : "#FEE2E2",
-                          color: order.status === "delivered" ? "#047857" : "#B91C1C",
+                          background: order.status === "delivered" ? "rgba(52, 211, 153, 0.16)" : "rgba(248, 113, 113, 0.16)",
+                          color: order.status === "delivered" ? "#34D399" : "#F87171",
                           textTransform: "uppercase",
                         }}
                       >
@@ -654,8 +654,8 @@ export default function ProfileClient() {
                             background:
                               order.paymentStatus === "refunded" ||
                               order.refundStatus === "processed"
-                                ? "#ECFDF5"
-                                : "#FFFBEB",
+                                ? "rgba(52, 211, 153, 0.10)"
+                                : "rgba(251, 191, 36, 0.10)",
                             border:
                               order.paymentStatus === "refunded" ||
                               order.refundStatus === "processed"
@@ -666,7 +666,7 @@ export default function ProfileClient() {
                         >
                           {order.paymentStatus === "refunded" ||
                           order.refundStatus === "processed" ? (
-                            <div style={{ color: "#065F46", fontWeight: 700 }}>
+                            <div style={{ color: "#6EE7B7", fontWeight: 700 }}>
                               ✅ Online Payment Refund Processed ({rupees(order.totalPaise)})
                               {order.refundToken ? ` · Token: ${order.refundToken}` : ""}
                             </div>
@@ -678,7 +678,7 @@ export default function ProfileClient() {
                                 justifyContent: "space-between",
                                 flexWrap: "wrap",
                                 gap: "0.5rem",
-                                color: "#92400E",
+                                color: "#FCD34D",
                               }}
                             >
                               <span>
@@ -687,7 +687,7 @@ export default function ProfileClient() {
                                   style={{
                                     fontSize: "0.95rem",
                                     fontWeight: 900,
-                                    color: "#B45309",
+                                    color: "#FBBF24",
                                   }}
                                 >
                                   {order.refundToken}
@@ -699,7 +699,7 @@ export default function ProfileClient() {
                                 style={{
                                   fontSize: "0.75rem",
                                   fontWeight: 800,
-                                  color: "#B45309",
+                                  color: "#FBBF24",
                                 }}
                               >
                                 View Refund Portal →
@@ -713,7 +713,7 @@ export default function ProfileClient() {
                                 justifyContent: "space-between",
                                 flexWrap: "wrap",
                                 gap: "0.5rem",
-                                color: "#92400E",
+                                color: "#FCD34D",
                               }}
                             >
                               <span>

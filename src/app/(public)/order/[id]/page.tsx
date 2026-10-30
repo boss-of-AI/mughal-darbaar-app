@@ -176,45 +176,45 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
 
   if (order.status === "rejected") {
     bannerText = "Sorry — the restaurant couldn't accept this order.";
-    bannerBg = "#FEF2F2";
+    bannerBg = "rgba(248, 113, 113, 0.10)";
     bannerBorder = "#EF4444";
     bannerColor = "#991B1B";
   } else if (order.status === "cancelled") {
     bannerText = "This order was cancelled.";
-    bannerBg = "#FEF2F2";
+    bannerBg = "rgba(248, 113, 113, 0.10)";
     bannerBorder = "#EF4444";
     bannerColor = "#991B1B";
   } else if (isDineIn) {
     if (stageIdx === 0) {
       bannerText = `Order Sent to Kitchen (${tableName || "Dine-In"}) — Waiting for staff to accept your order…`;
-      bannerBg = "#FFFBEB";
+      bannerBg = "rgba(251, 191, 36, 0.10)";
       bannerBorder = "#F59E0B";
-      bannerColor = "#92400E";
+      bannerColor = "#FCD34D";
     } else if (stageIdx === 1) {
       bannerText =
         "Order Accepted! 👨‍🍳 Our kitchen is preparing your dishes fresh for your table.";
-      bannerBg = "#EFF6FF";
+      bannerBg = "rgba(96, 165, 250, 0.10)";
       bannerBorder = "#3B82F6";
       bannerColor = "#1E40AF";
     } else if (stageIdx === 2) {
       bannerText =
         "Order Is Ready! 🍽️ Enjoy your meal! You can order more items anytime, or tap 'Generate Final Total Bill' when you finish.";
-      bannerBg = "#F5F3FF";
+      bannerBg = "rgba(167, 139, 250, 0.10)";
       bannerBorder = "#8B5CF6";
-      bannerColor = "#5B21B6";
+      bannerColor = "#C4B5FD";
     } else if (stageIdx === 3) {
       bannerText = `🧾 Final Total Bill Generated (${rupees(
         combinedTotalPaise
       )}) — Please show this bill and pay at the counter.`;
-      bannerBg = "#FFFBEB";
+      bannerBg = "rgba(251, 191, 36, 0.10)";
       bannerBorder = "#D97706";
-      bannerColor = "#92400E";
+      bannerColor = "#FCD34D";
     } else if (stageIdx === 4) {
       bannerText =
         "✅ Bill Paid at Counter! Thank you for dining at Mughal Darbaar. We hope to see you again soon!";
-      bannerBg = "#ECFDF5";
+      bannerBg = "rgba(52, 211, 153, 0.10)";
       bannerBorder = "#10B981";
-      bannerColor = "#065F46";
+      bannerColor = "#6EE7B7";
     }
   } else {
     if (order.status === "pending") {
@@ -222,12 +222,12 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
         order.paymentMethod === "razorpay" && order.paymentStatus === "paid"
           ? "Payment Successful (Paid Online ✅) — Waiting for chef/staff to accept your order…"
           : "Order Confirmed (Cash on Delivery) — Waiting for chef/staff to accept your order…";
-      bannerBg = "#FFFBEB";
+      bannerBg = "rgba(251, 191, 36, 0.10)";
       bannerBorder = "#F59E0B";
-      bannerColor = "#92400E";
+      bannerColor = "#FCD34D";
     } else if (stageIdx === 1) {
       bannerText = "Order Placed! 👨‍🍳 Our chef has accepted your order and is preparing it fresh.";
-      bannerBg = "#EFF6FF";
+      bannerBg = "rgba(96, 165, 250, 0.10)";
       bannerBorder = "#3B82F6";
       bannerColor = "#1E40AF";
     } else if (stageIdx === 2) {
@@ -237,24 +237,24 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
             ? `Please keep ${rupees(order.totalPaise)} in cash ready to hand over.`
             : "Please collect your order at the door."
         }`;
-        bannerBg = "#ECFDF5";
+        bannerBg = "rgba(52, 211, 153, 0.10)";
         bannerBorder = "#10B981";
-        bannerColor = "#065F46";
+        bannerColor = "#6EE7B7";
       } else {
         bannerText = `Out for Delivery! 🛵 ${
           order.riderName
             ? `Rider ${order.riderName} is on the way to your location.`
             : "Your order is on the way to your location."
         }`;
-        bannerBg = "#ECFEFF";
+        bannerBg = "rgba(34, 211, 238, 0.10)";
         bannerBorder = "#06B6D4";
-        bannerColor = "#0E7490";
+        bannerColor = "#67E8F9";
       }
     } else if (stageIdx === 3) {
       bannerText = "Delivered! ✅ Thank you for ordering with us. Enjoy your meal!";
-      bannerBg = "#ECFDF5";
+      bannerBg = "rgba(52, 211, 153, 0.10)";
       bannerBorder = "#10B981";
-      bannerColor = "#065F46";
+      bannerColor = "#6EE7B7";
     }
   }
 
@@ -290,8 +290,8 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
         {isDineIn && (
           <span
             style={{
-              background: "#FEF3C7",
-              color: "#92400E",
+              background: "rgba(251, 191, 36, 0.16)",
+              color: "#FCD34D",
               border: "1.5px solid #F59E0B",
               borderRadius: 999,
               padding: "4px 12px",
@@ -370,9 +370,9 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                   borderRadius: 12,
                   textAlign: "center",
                   background: isCompleted
-                    ? "#DCFCE7"
+                    ? "rgba(52, 211, 153, 0.16)"
                     : isCurrent
-                    ? "#DBEAFE"
+                    ? "rgba(96, 165, 250, 0.16)"
                     : "var(--color-surface)",
                   border: isCompleted
                     ? "2px solid #16A34A"
@@ -380,9 +380,9 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                     ? "2px solid #2563EB"
                     : "1px solid var(--color-border)",
                   color: isCompleted
-                    ? "#15803D"
+                    ? "#4ADE80"
                     : isCurrent
-                    ? "#1D4ED8"
+                    ? "#93C5FD"
                     : "var(--color-text-light)",
                   transition: "all 0.2s ease",
                 }}
@@ -405,7 +405,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
           style={{
             padding: "1rem 1.25rem",
             borderRadius: 12,
-            background: order.riderReachedAt ? "#ECFDF5" : "#EFF6FF",
+            background: order.riderReachedAt ? "rgba(52, 211, 153, 0.10)" : "rgba(96, 165, 250, 0.10)",
             border: order.riderReachedAt ? "2px solid #10B981" : "1.5px solid #93C5FD",
             marginBottom: "1.25rem",
             display: "flex",
@@ -422,7 +422,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                 fontSize: "0.75rem",
                 fontWeight: 800,
                 textTransform: "uppercase",
-                color: order.riderReachedAt ? "#047857" : "#1D4ED8",
+                color: order.riderReachedAt ? "#34D399" : "#93C5FD",
               }}
             >
               {order.riderReachedAt
@@ -435,7 +435,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                 style={{
                   display: "block",
                   fontSize: "0.82rem",
-                  color: "#B45309",
+                  color: "#FBBF24",
                   fontWeight: 700,
                   marginTop: 2,
                 }}
@@ -527,8 +527,8 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                 borderRadius: 999,
                 fontSize: "0.78rem",
                 fontWeight: 800,
-                background: isSessionPaid ? "#D1FAE5" : "#FEF3C7",
-                color: isSessionPaid ? "#047857" : "#B45309",
+                background: isSessionPaid ? "rgba(52, 211, 153, 0.16)" : "rgba(251, 191, 36, 0.16)",
+                color: isSessionPaid ? "#34D399" : "#FBBF24",
                 border: isSessionPaid ? "1px solid #10B981" : "1px solid #F59E0B",
               }}
             >
@@ -617,11 +617,11 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
               marginTop: "1rem",
               padding: "0.85rem 1rem",
               borderRadius: 10,
-              background: isSessionPaid ? "#ECFDF5" : "#FFFBEB",
-              border: isSessionPaid ? "1px solid #A7F3D0" : "1px solid #FDE68A",
+              background: isSessionPaid ? "rgba(52, 211, 153, 0.10)" : "rgba(251, 191, 36, 0.10)",
+              border: isSessionPaid ? "1px solid #A7F3D0" : "1px solid rgba(251, 191, 36, 0.35)",
               fontSize: "0.92rem",
               fontWeight: 700,
-              color: isSessionPaid ? "#047857" : "#92400E",
+              color: isSessionPaid ? "#34D399" : "#FCD34D",
               textAlign: "center",
             }}
           >
@@ -690,7 +690,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
               borderTop: "1px dashed var(--color-border)",
               fontSize: "var(--text-sm)",
               fontWeight: 600,
-              color: order.paymentStatus === "paid" ? "#047857" : "#B45309",
+              color: order.paymentStatus === "paid" ? "#34D399" : "#FBBF24",
             }}
           >
             {order.paymentMethod === "razorpay"

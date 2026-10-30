@@ -235,8 +235,8 @@ export default function MenuClient({
                     border: "1px solid var(--color-border)",
                     fontSize: "0.78rem",
                     fontWeight: 700,
-                    background: "#FFFBEB",
-                    color: "#92400E",
+                    background: "rgba(251, 191, 36, 0.10)",
+                    color: "#FCD34D",
                     cursor: "pointer",
                   }}
                 >

@@ -64,8 +64,8 @@ export default function StoreStatusBanner() {
                 gap: "0.3rem",
                 padding: "0.18rem 0.55rem",
                 borderRadius: 999,
-                background: "#FEE2E2",
-                color: "#991B1B",
+                background: "rgba(248, 113, 113, 0.16)",
+                color: "#FCA5A5",
                 fontWeight: 800,
                 fontSize: "0.72rem",
               }}
@@ -84,7 +84,7 @@ export default function StoreStatusBanner() {
             style={{
               padding: "0.25rem 0.7rem",
               borderRadius: 999,
-              border: "1px solid #FDE68A",
+              border: "1px solid rgba(251, 191, 36, 0.35)",
               background: "rgba(254, 243, 199, 0.14)",
               color: "#FDE68A",
               fontSize: "0.74rem",
@@ -143,8 +143,8 @@ export default function StoreStatusBanner() {
                   gap: "0.4rem",
                   padding: "0.28rem 0.85rem",
                   borderRadius: 999,
-                  background: "#FEE2E2",
-                  color: "#991B1B",
+                  background: "rgba(248, 113, 113, 0.16)",
+                  color: "#FCA5A5",
                   fontSize: "0.74rem",
                   fontWeight: 900,
                   letterSpacing: "0.04em",
@@ -214,7 +214,7 @@ export default function StoreStatusBanner() {
                 <span
                   style={{
                     fontSize: "0.72rem",
-                    color: "#D1D5DB",
+                    color: "#9CA3AF",
                     background: "rgba(255,255,255,0.08)",
                     padding: "0.22rem 0.55rem",
                     borderRadius: 6,

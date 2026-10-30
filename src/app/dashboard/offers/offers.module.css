@@ -64,8 +64,8 @@
 }
 
 .successText {
-  color: #047857;
-  background: #D1FAE5;
+  color: #34D399;
+  background: rgba(52, 211, 153, 0.16);
   padding: var(--space-3);
   border-radius: var(--radius-md);
   font-size: var(--text-xs);
@@ -120,8 +120,8 @@
 }
 
 .pctBadge {
-  background: #FEF3C7;
-  color: #B45309;
+  background: rgba(251, 191, 36, 0.16);
+  color: #FBBF24;
   font-weight: 700;
   font-size: var(--text-xs);
   padding: 3px 8px;
@@ -130,8 +130,8 @@
 }
 
 .catBadge {
-  background: #E0E7FF;
-  color: #3730A3;
+  background: rgba(96, 165, 250, 0.16);
+  color: #93C5FD;
   font-weight: 600;
   font-size: var(--text-xs);
   padding: 3px 8px;
@@ -147,7 +147,7 @@
 .pausedPill {
   font-size: 11px;
   font-weight: 700;
-  color: #6B7280;
+  color: #9CA3AF;
 }
 
 .offerTitle {

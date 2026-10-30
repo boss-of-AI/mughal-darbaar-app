@@ -41,16 +41,16 @@ export default function AcceptDeliveryButton({
       style={{
         padding: "1.25rem",
         borderRadius: 14,
-        background: "#ECFDF5",
+        background: "rgba(52, 211, 153, 0.10)",
         border: "2px solid #10B981",
         marginBottom: "1.5rem",
         textAlign: "center",
       }}
     >
-      <p style={{ fontWeight: 700, color: "#065F46", fontSize: "1rem", marginBottom: "0.35rem" }}>
+      <p style={{ fontWeight: 700, color: "#6EE7B7", fontSize: "1rem", marginBottom: "0.35rem" }}>
         🛵 Has your order reached you?
       </p>
-      <p style={{ color: "#047857", fontSize: "0.875rem", marginBottom: "1rem" }}>
+      <p style={{ color: "#34D399", fontSize: "0.875rem", marginBottom: "1rem" }}>
         {isCod
           ? `Please pay ${amountFormatted} in cash to the delivery partner, then click "Accept Order" below to mark it as delivered.`
           : `Click "Accept Order" below once you receive your food to mark it as delivered.`}

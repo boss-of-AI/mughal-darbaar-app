@@ -177,9 +177,9 @@ export default function AccountClient({ initial }: { initial: AccountProps }) {
             style={{
               padding: "0.7rem 0.9rem",
               borderRadius: 10,
-              background: "#FEF2F2",
+              background: "rgba(248, 113, 113, 0.10)",
               border: "1px solid #FCA5A5",
-              color: "#B91C1C",
+              color: "#F87171",
               fontSize: "0.84rem",
               fontWeight: 700,
             }}
@@ -194,9 +194,9 @@ export default function AccountClient({ initial }: { initial: AccountProps }) {
             style={{
               padding: "0.7rem 0.9rem",
               borderRadius: 10,
-              background: "#ECFDF5",
+              background: "rgba(52, 211, 153, 0.10)",
               border: "1px solid #6EE7B7",
-              color: "#047857",
+              color: "#34D399",
               fontSize: "0.84rem",
               fontWeight: 700,
               display: "flex",

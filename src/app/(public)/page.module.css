@@ -133,7 +133,7 @@
 .heroCard {
   position: relative;
   width: min(400px, 100%);
-  background: white;
+  background: var(--color-surface-alt);
   border-radius: var(--radius-2xl);
   padding: var(--space-8);
   box-shadow: var(--shadow-xl), 0 0 0 1px rgba(212,175,55,0.2);
@@ -195,7 +195,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  background: white;
+  background: var(--color-surface-alt);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
   padding: 0.4rem 0.8rem;
@@ -209,9 +209,9 @@
 .floatingBadge1 {
   top: -14px;
   right: 20px;
-  background: linear-gradient(135deg, #FFF7ED, #FFEDD5);
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.22), rgba(251, 146, 60, 0.10));
   border-color: #FDBA74;
-  color: #C2410C;
+  color: #FB923C;
   animation: fadeInDown 0.5s 0.5s ease both;
 }
 
@@ -224,9 +224,9 @@
 .floatingBadge3 {
   top: 60px;
   left: -24px;
-  background: linear-gradient(135deg, #FFFBEB, #FEF9C3);
-  border-color: #FDE68A;
-  color: #92400E;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.10), rgba(251, 191, 36, 0.14));
+  border-color: rgba(251, 191, 36, 0.35);
+  color: #FCD34D;
   animation: fadeIn 0.5s 0.9s ease both;
 }
 
@@ -292,7 +292,7 @@
 }
 
 .serviceCard--primary {
-  background: white;
+  background: var(--color-surface-alt);
   border-color: var(--color-border);
   color: var(--color-text);
 }
@@ -391,7 +391,7 @@
   font-size: 4rem;
   text-align: center;
   padding: var(--space-8) var(--space-6) var(--space-4);
-  background: linear-gradient(180deg, var(--color-surface-alt) 0%, white 100%);
+  background: linear-gradient(180deg, rgba(217, 178, 90, 0.10) 0%, var(--color-surface) 100%);
   display: block;
   filter: drop-shadow(0 4px 8px rgba(0,0,0,0.12));
 }
@@ -788,4 +788,51 @@
   .statValue { font-size: var(--text-2xl); }
   .dishGrid { grid-template-columns: 1fr; }
   .ctaActions { flex-direction: column; align-items: stretch; }
+}
+
+/* -- Hero photo card (royal-dark) --------------------------- */
+.heroCard { padding: var(--space-2); border-radius: 28px; overflow: visible; }
+.heroPhoto {
+  height: 240px;
+  border-radius: 22px 22px 8px 8px;
+  background-image: linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.5)), url("https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=900&q=80");
+  background-size: cover;
+  background-position: center;
+  background-color: var(--color-surface-raised);
+}
+.heroCard .heroCardInner { padding: var(--space-5) var(--space-4) var(--space-4); }
+.heroCard .heroCardItem { margin-bottom: var(--space-2); }
+
+/* -- Bites (category rings) --------------------------------- */
+.bitesSection { padding: var(--space-10) 0 var(--space-4); }
+.bitesHeader { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-5); }
+.bitesTitle { font-family: var(--font-body); font-size: var(--text-lg); font-weight: 700; }
+.viewAll { font-size: var(--text-sm); color: var(--color-text-muted); font-weight: 600; }
+.viewAll:hover { color: var(--color-gold-light); }
+.bitesRow {
+  display: flex;
+  gap: var(--space-6);
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+  scrollbar-width: none;
+}
+.bitesRow::-webkit-scrollbar { display: none; }
+.bite { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); flex: none; color: var(--color-text-muted); }
+.bite:hover { color: var(--color-text); }
+.biteRing {
+  width: 78px; height: 78px; padding: 3px; border-radius: 50%;
+  background: conic-gradient(var(--color-gold), var(--color-primary), var(--color-gold));
+  transition: transform var(--transition-bounce);
+}
+.bite:hover .biteRing { transform: scale(1.07) rotate(6deg); }
+.bitePhoto {
+  display: block; width: 100%; height: 100%; border-radius: 50%;
+  border: 3px solid var(--color-bg);
+  background-size: cover; background-position: center; background-color: var(--color-surface-alt);
+}
+.biteLabel { font-size: var(--text-xs); font-weight: 600; }
+@media (max-width: 768px) {
+  .heroPhoto { height: 190px; }
+  .biteRing { width: 64px; height: 64px; }
+  .bitesRow { gap: var(--space-4); }
 }

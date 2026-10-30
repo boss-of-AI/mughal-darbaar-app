@@ -270,7 +270,7 @@
 .itemCard {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
+  border-radius: 26px;
   overflow: hidden;
   transition: all var(--transition-base);
   display: flex;
@@ -285,14 +285,18 @@
 
 .itemCardFeatured {
   border-color: rgba(212,175,55,0.5);
-  background: linear-gradient(180deg, #FFFDF5 0%, white 60%);
+  background: linear-gradient(180deg, rgba(217, 178, 90, 0.10) 0%, var(--color-surface) 60%);
 }
 
 .itemImageWrap {
   position: relative;
-  background: linear-gradient(180deg, var(--color-surface-alt), var(--color-border) 100%);
-  padding: var(--space-6) 0 var(--space-4);
+  aspect-ratio: 4 / 3;
+  padding: 8px 8px 0;
   text-align: center;
+}
+.itemImageWrap img {
+  border-radius: 20px;
+  background: var(--color-surface-alt);
 }
 
 .itemEmoji {
@@ -689,3 +693,8 @@
   .itemGrid { grid-template-columns: 1fr; }
   .floatingCart { width: calc(100% - var(--space-8)); border-radius: var(--radius-xl); }
 }
+
+@media (max-width: 768px) {
+  .floatingCart { bottom: 92px; }
+}
+

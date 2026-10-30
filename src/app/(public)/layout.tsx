@@ -1,5 +1,6 @@
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import BottomNav from "@/components/layout/BottomNav";
 import OffersPopup from "@/components/public/OffersPopup";
 import StoreStatusBanner from "@/components/public/StoreStatusBanner";
 
@@ -17,6 +18,7 @@ export default function PublicLayout({
       </main>
       <OffersPopup />
       <Footer />
+      <BottomNav />
     </>
   );
 }
